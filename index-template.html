@@ -1,17 +1,18 @@
 <html>
+
 <body>
     <h1><a href={{.site_root}}>Craig Weber</a></h1>
     {{- with .page }}
     {{- range .item }}
-        <div>
-            <h2><a href={{.url}}>{{.title}}</a></h2>
-            <p>{{.date}}</p>
-            {{range .tags}}<a href={{.url}}>{{.tag}}</a>{{end}}
-            {{.summary}}
-            {{- if .summarized }}
-            <a href={{.url}}>Read More</a>
-            {{- end }}
-        </div>
+    <div>
+        <h2><a href={{.url}}>{{.title}}</a></h2>
+        <p>{{.date}}</p>
+        {{range .tags}}<li><a href={{.url}}>{{.tag}}</a></li>{{end}}
+        {{.summary}}
+        {{- if .summarized }}
+        <a href={{.url}}>Read More</a>
+        {{- end }}
+    </div>
     {{- end }}
     {{- if .prev }}
     <a href={{.prev}}>Prev Page</a>
@@ -21,4 +22,5 @@
     {{- end}}
     {{- end}}
 </body>
+
 </html>

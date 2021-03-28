@@ -8,7 +8,7 @@ use std::fs::{read_dir, File};
 use std::io::prelude::*;
 use std::path::Path;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Tag {
     pub tag: String,
     pub url: UrlBuf,
@@ -69,7 +69,7 @@ pub struct Post<T> {
 
 impl Post<String> {
     pub fn convert_tags(&self, tags_base_url: &Url) -> Post<Tag> {
-        return Post {
+        Post {
             id: self.id.clone(),
             title: self.title.clone(),
             date: self.date.clone(),
@@ -79,10 +79,10 @@ impl Post<String> {
                 .iter()
                 .map(|t| Tag {
                     tag: t.clone(),
-                    url: tags_base_url.join(t).to_owned(),
+                    url: tags_base_url.join(format!("{}/0.html", t)),
                 })
                 .collect(),
-        };
+        }
     }
 
     pub fn from_str(id: &str, input: &str) -> anyhow::Result<Self> {
@@ -194,7 +194,7 @@ pub fn parse_posts_singlethreaded(dir: &Path) -> Result<Vec<Post<String>>> {
 #[derive(Clone)]
 pub struct PostSummary {
     pub id: String,
-    pub url: String,
+    pub url: UrlBuf,
     pub title: String,
     pub date: String,
     pub summary: String,
@@ -202,13 +202,13 @@ pub struct PostSummary {
     pub tags: Vec<Tag>,
 }
 
-impl From<(&Post<Tag>, &str)> for PostSummary {
-    fn from(tuple: (&Post<Tag>, &str)) -> PostSummary {
+impl From<(&Post<Tag>, &Url)> for PostSummary {
+    fn from(tuple: (&Post<Tag>, &Url)) -> PostSummary {
         let (p, base_url) = tuple;
         let (summary, summarized) = p.summary();
         PostSummary {
             id: p.id.clone(),
-            url: format!("{}/{}.html", base_url, p.id),
+            url: base_url.join(&format!("{}.html", p.id)),
             title: p.title.clone(),
             date: p.date.clone(),
             summary: summary.to_owned(),

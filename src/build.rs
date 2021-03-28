@@ -31,22 +31,16 @@ fn read_to_string(path: &Path) -> Result<String> {
 }
 
 pub fn build_site(config: &Config) -> Result<()> {
-    // collect all posts
-    let posts: Vec<Post<Tag>> = parse_posts(
-        &config.source_directory,
-        match config.threads {
-            Some(threads) => threads,
-            None => 1,
-        },
-    )?
-    .into_iter()
-    .map(|p| p.convert_tags(&config.index_url))
-    .collect();
-
     let threads = match config.threads {
         Some(threads) => threads,
-        None => 1,
+        None => num_cpus::get(),
     };
+
+    // collect all posts
+    let posts: Vec<Post<Tag>> = parse_posts(&config.source_directory, threads)?
+        .into_iter()
+        .map(|p| p.convert_tags(&config.index_url))
+        .collect();
 
     // render index pages
     render_indices(
@@ -54,6 +48,7 @@ pub fn build_site(config: &Config) -> Result<()> {
         &config.index_url,
         &config.index_directory,
         &read_to_string(&config.index_template)?,
+        &config.posts_url,
         &config.site_root,
         config.index_page_size,
         threads,
@@ -74,6 +69,7 @@ fn render_indices(
     index_url: &Url,
     index_directory: &Path,
     index_template: &str,
+    posts_url: &Url,
     site_root: &Url,
     page_size: usize,
     threads: usize,
@@ -82,6 +78,7 @@ fn render_indices(
         render_index(
             index,
             tag,
+            posts_url,
             index_url,
             index_directory,
             index_template,
@@ -96,6 +93,7 @@ fn render_indices(
 fn render_index(
     index: &[&Post<Tag>],
     tag: &str,
+    posts_url: &Url,
     index_url: &Url,
     index_directory: &Path,
     index_template: &str,
@@ -107,7 +105,7 @@ fn render_index(
         index_pages(
             &index
                 .into_iter()
-                .map(|p| PostSummary::from((*p, index_url.join(tag).as_str())))
+                .map(|p| PostSummary::from((*p, posts_url)))
                 .collect::<Vec<PostSummary>>(),
             page_size,
             index_url,
@@ -132,18 +130,18 @@ fn post_pages<'a>(posts: &'a [Post<Tag>], base_url: &Url) -> Vec<Page<&'a Post<T
             item: &posts[0],
             id: posts[0].id.clone(),
             prev: None,
-            next: Some(base_url.join(&posts[1].id)),
+            next: Some(base_url.join(format!("{}.html", &posts[1].id))),
         })
         .chain(posts.array_windows().map(|[prev, post, next]| Page {
             item: post,
             id: post.id.clone(),
-            prev: Some(base_url.join(&prev.id)),
-            next: Some(base_url.join(&next.id)),
+            prev: Some(base_url.join(format!("{}.html", &prev.id))),
+            next: Some(base_url.join(format!("{}.html", &next.id))),
         }))
         .chain(std::iter::once(Page {
             item: &posts[posts.len() - 1],
             id: posts[posts.len() - 1].id.clone().into(),
-            prev: Some(base_url.join(&posts[posts.len() - 2].id)),
+            prev: Some(base_url.join(format!("{}.html", posts[posts.len() - 2].id))),
             next: None,
         }))
         .collect(),
@@ -167,11 +165,11 @@ fn index_pages<'a>(
             id: format!("{}", page_number),
             prev: match page_number {
                 0 => None,
-                _ => Some(base_url.join((page_number - 1).to_string())),
+                _ => Some(base_url.join(format!("{}.html", page_number - 1))),
             },
             next: match page_number + 1 < total_pages {
                 false => None,
-                true => Some(base_url.join((page_number + 1).to_string())),
+                true => Some(base_url.join(format!("{}.html", page_number + 1))),
             },
         })
 }

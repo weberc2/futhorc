@@ -32,7 +32,7 @@ impl From<Tag> for Value {
     fn from(t: Tag) -> Value {
         let mut m: HashMap<String, Value> = HashMap::new();
         m.insert("tag".to_owned(), (&t.tag).into());
-        m.insert("url".to_owned(), (&t.tag).into());
+        m.insert("url".to_owned(), (&t.url).into());
         Value::Object(m)
     }
 }
@@ -77,6 +77,12 @@ impl From<&Url> for Value {
 
 impl From<UrlBuf> for Value {
     fn from(url: UrlBuf) -> Value {
-        Value::String(url.into_string())
+        Value::from(&url)
+    }
+}
+
+impl From<&UrlBuf> for Value {
+    fn from(url: &UrlBuf) -> Value {
+        Value::from(url.as_ref())
     }
 }

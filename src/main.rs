@@ -22,11 +22,11 @@ fn main() {
         index_url: UrlBuf::from("file:///tmp/pages"),
         index_template: PathBuf::from("./index-template.html"),
         index_directory: PathBuf::from("/tmp/pages"),
-        index_page_size: 2,
+        index_page_size: 10,
         posts_url: UrlBuf::from("file:///tmp/posts"),
         posts_template: PathBuf::from("./post-template.html"),
         posts_directory: PathBuf::from("/tmp/posts"),
-        threads: Some(1),
+        threads: None,
     })
     .unwrap();
 }

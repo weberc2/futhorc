@@ -51,7 +51,7 @@ impl std::fmt::Display for Url {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct UrlBuf(String);
 
 impl UrlBuf {
@@ -61,6 +61,12 @@ impl UrlBuf {
 
     pub fn into_string(self) -> String {
         self.0
+    }
+}
+
+impl std::fmt::Display for UrlBuf {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.as_ref().fmt(f)
     }
 }
 
