@@ -19,13 +19,16 @@ impl Url {
         UrlBuf::from(self.0.to_string())
     }
 
-    pub fn to_owned(&self) -> UrlBuf {
-        UrlBuf(self.0.to_owned())
-    }
-
     #[inline]
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+}
+
+impl ToOwned for Url {
+    type Owned = UrlBuf;
+    fn to_owned(&self) -> UrlBuf {
+        UrlBuf(self.0.to_owned())
     }
 }
 
@@ -71,6 +74,13 @@ impl From<String> for UrlBuf {
     #[inline]
     fn from(s: String) -> UrlBuf {
         UrlBuf(s)
+    }
+}
+
+impl From<&str> for UrlBuf {
+    #[inline]
+    fn from(s: &str) -> UrlBuf {
+        UrlBuf(s.to_owned())
     }
 }
 

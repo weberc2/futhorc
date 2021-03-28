@@ -165,8 +165,16 @@ fn process_entry(file_name: &str, full_path: &Path) -> Result<Post<String>> {
     Post::from_str(base_name, &contents)
 }
 
+pub fn parse_posts(dir: &Path, threads: usize) -> Result<Vec<Post<String>>> {
+    if threads < 2 {
+        parse_posts_singlethreaded(dir)
+    } else {
+        parse_posts_parallel(dir, threads)
+    }
+}
+
 // Walks `dir` and returns a vector of posts ordered by date.
-pub fn parse_posts(dir: &Path) -> Result<Vec<Post<String>>> {
+pub fn parse_posts_singlethreaded(dir: &Path) -> Result<Vec<Post<String>>> {
     let mut posts: Vec<Post<String>> = Vec::new();
 
     for result in read_dir(dir)? {

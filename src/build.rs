@@ -1,31 +1,47 @@
 use crate::page::*;
 use crate::post::*;
 use crate::slice::*;
-use crate::url::Url;
+use crate::url::*;
 use crate::write::*;
 use anyhow::Result;
+use serde::Deserialize;
 use std::collections::HashMap;
-use std::path::Path;
+use std::fs::File;
+use std::io::Read;
+use std::path::{Path, PathBuf};
 
-pub struct Config<'a> {
-    pub source_directory: &'a Path,
-    pub site_root: &'a Url,
-    pub index_url: &'a Url,
-    pub index_template: &'a str,
-    pub index_directory: &'a Path,
+#[derive(Deserialize)]
+pub struct Config {
+    pub source_directory: PathBuf,
+    pub site_root: UrlBuf,
+    pub index_url: UrlBuf,
+    pub index_template: PathBuf,
+    pub index_directory: PathBuf,
     pub index_page_size: usize,
-    pub posts_url: &'a Url,
-    pub posts_template: &'a str,
-    pub posts_directory: &'a Path,
+    pub posts_url: UrlBuf,
+    pub posts_template: PathBuf,
+    pub posts_directory: PathBuf,
     pub threads: Option<usize>,
+}
+
+fn read_to_string(path: &Path) -> Result<String> {
+    let mut contents = String::new();
+    File::open(path)?.read_to_string(&mut contents)?;
+    Ok(contents)
 }
 
 pub fn build_site(config: &Config) -> Result<()> {
     // collect all posts
-    let posts: Vec<Post<Tag>> = parse_posts_parallel(config.source_directory, 8)?
-        .into_iter()
-        .map(|p| p.convert_tags(config.index_url))
-        .collect();
+    let posts: Vec<Post<Tag>> = parse_posts(
+        &config.source_directory,
+        match config.threads {
+            Some(threads) => threads,
+            None => 1,
+        },
+    )?
+    .into_iter()
+    .map(|p| p.convert_tags(&config.index_url))
+    .collect();
 
     let threads = match config.threads {
         Some(threads) => threads,
@@ -35,20 +51,20 @@ pub fn build_site(config: &Config) -> Result<()> {
     // render index pages
     render_indices(
         &build_indices(&posts),
-        config.index_url,
-        config.index_directory,
-        config.index_template,
-        config.site_root,
+        &config.index_url,
+        &config.index_directory,
+        &read_to_string(&config.index_template)?,
+        &config.site_root,
         config.index_page_size,
         threads,
     )?;
 
     // render post pages
     write_pages(
-        post_pages(&posts, config.posts_url).into_iter(),
-        config.posts_directory,
-        config.posts_template,
-        config.site_root,
+        post_pages(&posts, &config.posts_url).into_iter(),
+        &config.posts_directory,
+        &read_to_string(&config.posts_template)?,
+        &config.site_root,
         threads,
     )
 }
@@ -151,11 +167,11 @@ fn index_pages<'a>(
             id: format!("{}", page_number),
             prev: match page_number {
                 0 => None,
-                _ => Some(base_url.join(page_number - 1)),
+                _ => Some(base_url.join((page_number - 1).to_string())),
             },
             next: match page_number + 1 < total_pages {
                 false => None,
-                true => Some(base_url.join(page_number + 1)),
+                true => Some(base_url.join((page_number + 1).to_string())),
             },
         })
 }
@@ -178,8 +194,4 @@ fn build_indices<'a>(posts: &'a [Post<Tag>]) -> HashMap<String, Vec<&'a Post<Tag
     // empty string.
     m.insert(String::new(), posts.iter().collect());
     m
-}
-
-fn to_url<D: std::fmt::Display>(base_url: &str, d: D) -> String {
-    format!("{}/{}.html", base_url.trim_end_matches('/'), d)
 }
