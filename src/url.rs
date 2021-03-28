@@ -8,8 +8,15 @@ impl Url {
         unsafe { &*(url.as_ref().trim_end_matches('/') as *const str as *const Url) }
     }
 
-    pub fn join<D: std::fmt::Display>(&self, rhs: D) -> UrlBuf {
-        UrlBuf(format!("{}/{}", &self.0, rhs))
+    pub fn join<S: AsRef<str>>(&self, rhs: S) -> UrlBuf {
+        let mut buf = self.to_url_buf();
+        buf.0.push('/');
+        buf.0.push_str(rhs.as_ref());
+        buf
+    }
+
+    pub fn to_url_buf(&self) -> UrlBuf {
+        UrlBuf::from(self.0.to_string())
     }
 
     pub fn to_owned(&self) -> UrlBuf {
@@ -57,6 +64,13 @@ impl UrlBuf {
 impl From<UrlBuf> for String {
     fn from(url_buf: UrlBuf) -> String {
         url_buf.0
+    }
+}
+
+impl From<String> for UrlBuf {
+    #[inline]
+    fn from(s: String) -> UrlBuf {
+        UrlBuf(s)
     }
 }
 

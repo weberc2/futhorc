@@ -209,19 +209,3 @@ impl From<(&Post<Tag>, &str)> for PostSummary {
         }
     }
 }
-
-pub fn join(lhs: &str, rhs: &str) -> String {
-    if lhs == "" {
-        return rhs.to_owned();
-    }
-
-    if rhs == "" {
-        return lhs.to_owned();
-    }
-
-    return format!(
-        "{}/{}",
-        lhs.trim_end_matches('/'),
-        rhs.trim_start_matches('/')
-    );
-}
