@@ -1,28 +1,34 @@
-use std::path::Path;
-use crate::build::*;
+#![feature(array_windows)]
 
-mod post;
-mod page;
-mod value;
-mod slice;
-mod write;
+use crate::build::*;
+use crate::url::Url;
+use std::path::Path;
+
 mod build;
+mod page;
+mod post;
+mod slice;
+mod url;
+mod value;
+mod write;
 
 fn main() {
-    build_site(&Config{
+    build_site(&Config {
         source_directory: Path::new(match &*std::env::args().collect::<Vec<String>>() {
             [_, path, ..] => path.as_str(),
             _ => "./test-data/posts/",
         }),
-        site_root: "file:///tmp/pages/0.html",
-        index_url: "file:///tmp/pages",
+        site_root: Url::new("file:///tmp/pages/0.html"),
+        index_url: Url::new("file:///tmp/pages"),
         index_template: INDEX_TEMPLATE,
-        index_directory: "/tmp/pages",
+        index_directory: Path::new("/tmp/pages"),
         index_page_size: 2,
-        posts_url: "file:///tmp/posts",
+        posts_url: Url::new("file:///tmp/posts"),
         posts_template: POST_TEMPLATE,
-        posts_directory: "/tmp/posts",
-    }).unwrap();
+        posts_directory: Path::new("/tmp/posts"),
+        threads: Some(1),
+    })
+    .unwrap();
 }
 
 const POST_TEMPLATE: &str = r#"<html>

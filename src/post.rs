@@ -1,25 +1,26 @@
-use std::{io::prelude::*};
-use std::path::Path;
-use std::fs::{File, read_dir};
-use serde_yaml;
-use serde::{Deserialize, Deserializer};
+use crate::url::{Url, UrlBuf};
+use anyhow::{anyhow, Result};
+use pulldown_cmark::{html, Parser};
 use serde::de::Error;
-use pulldown_cmark::{Parser, html};
-use anyhow::{Result, anyhow};
+use serde::{Deserialize, Deserializer};
+use serde_yaml;
+use std::fs::{read_dir, File};
+use std::io::prelude::*;
+use std::path::Path;
 
 #[derive(Clone)]
 pub struct Tag {
     pub tag: String,
-    pub url: String,
+    pub url: UrlBuf,
 }
 
 impl std::str::FromStr for Tag {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Tag{
+        Ok(Tag {
             tag: slug::slugify(s),
-            url: String::default(),
+            url: UrlBuf::new(),
         })
     }
 }
@@ -38,11 +39,11 @@ impl<'de> Deserialize<'de> for Tag {
 impl Tag {
     pub fn deserialize_seq<'de, D>(deserializer: D) -> Result<Vec<Tag>, D::Error>
     where
-        D: Deserializer<'de>
+        D: Deserializer<'de>,
     {
         #[derive(Deserialize)]
         struct Wrapper(#[serde(deserialize_with = "Tag::deserialize")] Tag);
-    
+
         let v = Vec::deserialize(deserializer)?;
         Ok(v.into_iter().map(|Wrapper(a)| a).collect())
     }
@@ -67,14 +68,21 @@ pub struct Post<T> {
 }
 
 impl Post<String> {
-    pub fn convert_tags(&self, tags_base_url: &str) -> Post<Tag> {
-        return Post{
+    pub fn convert_tags(&self, tags_base_url: &Url) -> Post<Tag> {
+        return Post {
             id: self.id.clone(),
             title: self.title.clone(),
             date: self.date.clone(),
             body: self.body.clone(),
-            tags: self.tags.iter().map(|t| Tag{tag: t.clone(), url: join(tags_base_url, t)}).collect(),
-        }
+            tags: self
+                .tags
+                .iter()
+                .map(|t| Tag {
+                    tag: t.clone(),
+                    url: tags_base_url.join(t).to_owned(),
+                })
+                .collect(),
+        };
     }
 
     pub fn from_str(id: &str, input: &str) -> anyhow::Result<Self> {
@@ -86,8 +94,8 @@ impl Post<String> {
             match input[FENCE.len()..].find("---") {
                 None => Err(anyhow!("Missing closing `---`")),
                 Some(offset) => Ok((
-                    FENCE.len(), // yaml_start
-                    FENCE.len() + offset, // yaml_stop
+                    FENCE.len(),                        // yaml_start
+                    FENCE.len() + offset,               // yaml_stop
                     FENCE.len() + offset + FENCE.len(), // body_start
                 )),
             }
@@ -113,11 +121,10 @@ impl<T> Post<T> {
 
 pub fn parse_posts_parallel(dir: &Path, threads: usize) -> Result<Vec<Post<String>>> {
     use crossbeam_channel::unbounded;
-    use std::thread;
     use std::path::PathBuf;
+    use std::thread;
 
-
-    let (tx, rx)  = unbounded::<(String, PathBuf)>();
+    let (tx, rx) = unbounded::<(String, PathBuf)>();
     let mut threads = Vec::with_capacity(threads);
 
     for _ in 0..threads.capacity() {
@@ -145,7 +152,7 @@ pub fn parse_posts_parallel(dir: &Path, threads: usize) -> Result<Vec<Post<Strin
     for thread in threads {
         posts.extend(thread.join().unwrap()?);
     }
-    posts.sort_by(|a, b|  b.date.cmp(&a.date));
+    posts.sort_by(|a, b| b.date.cmp(&a.date));
     Ok(posts)
 }
 
@@ -171,7 +178,7 @@ pub fn parse_posts(dir: &Path) -> Result<Vec<Post<String>>> {
         }
     }
 
-    posts.sort_by(|a, b|  b.date.cmp(&a.date));
+    posts.sort_by(|a, b| b.date.cmp(&a.date));
 
     Ok(posts)
 }
@@ -191,7 +198,7 @@ impl From<(&Post<Tag>, &str)> for PostSummary {
     fn from(tuple: (&Post<Tag>, &str)) -> PostSummary {
         let (p, base_url) = tuple;
         let (summary, summarized) = p.summary();
-        PostSummary{
+        PostSummary {
             id: p.id.clone(),
             url: format!("{}/{}.html", base_url, p.id),
             title: p.title.clone(),
@@ -212,5 +219,9 @@ pub fn join(lhs: &str, rhs: &str) -> String {
         return lhs.to_owned();
     }
 
-    return format!("{}/{}", lhs.trim_end_matches('/'), rhs.trim_start_matches('/'));
+    return format!(
+        "{}/{}",
+        lhs.trim_end_matches('/'),
+        rhs.trim_start_matches('/')
+    );
 }
