@@ -19,6 +19,7 @@ fn main() {
             _ => "./test-data/posts/",
         }),
         site_root: UrlBuf::from("file:///tmp/pages/0.html"),
+        base_template: PathBuf::from("./base-template.html"),
         index_url: UrlBuf::from("file:///tmp/pages"),
         index_template: PathBuf::from("./index-template.html"),
         index_directory: PathBuf::from("/tmp/pages"),

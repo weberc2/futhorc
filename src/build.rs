@@ -4,6 +4,7 @@ use crate::slice::*;
 use crate::url::*;
 use crate::write::*;
 use anyhow::Result;
+use gtmpl::Template;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs::File;
@@ -14,6 +15,7 @@ use std::path::{Path, PathBuf};
 pub struct Config {
     pub source_directory: PathBuf,
     pub site_root: UrlBuf,
+    pub base_template: PathBuf,
     pub index_url: UrlBuf,
     pub index_template: PathBuf,
     pub index_directory: PathBuf,
@@ -42,12 +44,17 @@ pub fn build_site(config: &Config) -> Result<()> {
         .map(|p| p.convert_tags(&config.index_url))
         .collect();
 
+    // Parse the template files.
+    let base_template_contents = &read_to_string(&config.base_template)?;
+    let index_template = parse_template(base_template_contents, &config.index_template)?;
+    let posts_template = parse_template(base_template_contents, &config.posts_template)?;
+
     // render index pages
     render_indices(
         &build_indices(&posts),
         &config.index_url,
         &config.index_directory,
-        &read_to_string(&config.index_template)?,
+        &index_template,
         &config.posts_url,
         &config.site_root,
         config.index_page_size,
@@ -58,7 +65,7 @@ pub fn build_site(config: &Config) -> Result<()> {
     write_pages(
         post_pages(&posts, &config.posts_url).into_iter(),
         &config.posts_directory,
-        &read_to_string(&config.posts_template)?,
+        &posts_template,
         &config.site_root,
         threads,
     )
@@ -68,7 +75,7 @@ fn render_indices(
     indices: &HashMap<String, Vec<&Post<Tag>>>,
     index_url: &Url,
     index_directory: &Path,
-    index_template: &str,
+    index_template: &Template,
     posts_url: &Url,
     site_root: &Url,
     page_size: usize,
@@ -96,7 +103,7 @@ fn render_index(
     posts_url: &Url,
     index_url: &Url,
     index_directory: &Path,
-    index_template: &str,
+    index_template: &Template,
     site_root: &Url,
     page_size: usize,
     threads: usize,
@@ -192,4 +199,18 @@ fn build_indices<'a>(posts: &'a [Post<Tag>]) -> HashMap<String, Vec<&'a Post<Tag
     // empty string.
     m.insert(String::new(), posts.iter().collect());
     m
+}
+
+// Loads the template file contents, appends them to `base_template`, and
+// parses the result into a template.
+fn parse_template(base_template: &str, template_file: &Path) -> Result<Template> {
+    let mut template = Template::default();
+    match template.parse(format!(
+        "{} {}",
+        base_template,
+        &read_to_string(template_file)?
+    )) {
+        Err(e) => Err(anyhow::anyhow!(e)),
+        Ok(_) => Ok(template),
+    }
 }

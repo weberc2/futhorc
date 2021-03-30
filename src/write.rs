@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use gtmpl::Template;
 use gtmpl_value::Value;
 use std::collections::HashMap;
 use std::fs;
@@ -27,7 +28,7 @@ where
 fn write_pages_singlethreaded<T, I>(
     pages: I,
     directory: &Path,
-    template: &str,
+    template: &Template,
     site_root: &Url,
 ) -> Result<()>
 where
@@ -35,11 +36,6 @@ where
     I: Iterator<Item = Page<T>>,
 {
     fs::create_dir_all(directory)?;
-
-    let mut t = gtmpl::Template::default();
-    if let Err(e) = t.parse(template) {
-        return Err(anyhow!(e));
-    }
     for context in pages.map(|page| Context { page, site_root }) {
         let path = directory.join(format!("{}.html", context.page.id));
         let ctx = match gtmpl::Context::from(context) {
@@ -47,7 +43,7 @@ where
             Err(e) => Err(anyhow!(e)),
         }?;
         let mut file = fs::File::create(path)?;
-        if let Err(e) = t.execute(&mut file, &ctx) {
+        if let Err(e) = template.execute(&mut file, &ctx) {
             return Err(anyhow!(e));
         }
     }
@@ -57,7 +53,7 @@ where
 fn write_pages_parallel<T, I>(
     pages: I,
     directory: &Path,
-    template: &str,
+    template: &Template,
     site_root: &Url,
     threads: usize,
 ) -> Result<()>
@@ -77,10 +73,6 @@ where
         for _ in 0..handles.capacity() {
             let rx = rx.clone();
             handles.push(scope.spawn(move |_| -> Result<()> {
-                let mut t = gtmpl::Template::default();
-                if let Err(e) = t.parse(template) {
-                    return Err(anyhow!(e));
-                }
                 for page in rx {
                     let path = directory.join(format!("{}.html", page.id));
                     let context = match gtmpl::Context::from(Context {
@@ -91,7 +83,7 @@ where
                         Err(e) => Err(anyhow!(e)),
                     }?;
                     let mut file = fs::File::create(path)?;
-                    if let Err(e) = t.execute(&mut file, &context) {
+                    if let Err(e) = template.execute(&mut file, &context) {
                         return Err(anyhow!(e));
                     }
                 }
@@ -118,7 +110,7 @@ where
 pub fn write_pages<T, I>(
     pages: I,
     directory: &Path,
-    template: &str,
+    template: &Template,
     site_root: &Url,
     threads: usize,
 ) -> Result<()>
