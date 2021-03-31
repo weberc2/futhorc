@@ -15,21 +15,14 @@ use std::path::{Path, PathBuf};
 pub struct Config {
     pub source_directory: PathBuf,
     pub site_root: UrlBuf,
-    pub base_template: PathBuf,
     pub index_url: UrlBuf,
-    pub index_template: PathBuf,
+    pub index_template: Vec<PathBuf>,
     pub index_directory: PathBuf,
     pub index_page_size: usize,
     pub posts_url: UrlBuf,
-    pub posts_template: PathBuf,
+    pub posts_template: Vec<PathBuf>,
     pub posts_directory: PathBuf,
     pub threads: Option<usize>,
-}
-
-fn read_to_string(path: &Path) -> Result<String> {
-    let mut contents = String::new();
-    File::open(path)?.read_to_string(&mut contents)?;
-    Ok(contents)
 }
 
 pub fn build_site(config: &Config) -> Result<()> {
@@ -45,9 +38,8 @@ pub fn build_site(config: &Config) -> Result<()> {
         .collect();
 
     // Parse the template files.
-    let base_template_contents = &read_to_string(&config.base_template)?;
-    let index_template = parse_template(base_template_contents, &config.index_template)?;
-    let posts_template = parse_template(base_template_contents, &config.posts_template)?;
+    let index_template = parse_template(config.index_template.iter())?;
+    let posts_template = parse_template(config.posts_template.iter())?;
 
     // render index pages
     render_indices(
@@ -203,13 +195,14 @@ fn build_indices<'a>(posts: &'a [Post<Tag>]) -> HashMap<String, Vec<&'a Post<Tag
 
 // Loads the template file contents, appends them to `base_template`, and
 // parses the result into a template.
-fn parse_template(base_template: &str, template_file: &Path) -> Result<Template> {
+fn parse_template<'a, P: AsRef<Path>>(template_files: impl Iterator<Item = P>) -> Result<Template> {
+    let mut contents = String::new();
+    for template_file in template_files {
+        File::open(template_file)?.read_to_string(&mut contents)?;
+        contents.push(' ');
+    }
     let mut template = Template::default();
-    match template.parse(format!(
-        "{} {}",
-        base_template,
-        &read_to_string(template_file)?
-    )) {
+    match template.parse(&contents) {
         Err(e) => Err(anyhow::anyhow!(e)),
         Ok(_) => Ok(template),
     }

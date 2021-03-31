@@ -1,8 +1,8 @@
 #![feature(array_windows)]
 
 use crate::build::*;
-use crate::url::*;
-use std::path::PathBuf;
+use anyhow::Result;
+use serde_yaml;
 
 mod build;
 mod page;
@@ -12,22 +12,18 @@ mod url;
 mod value;
 mod write;
 
-fn main() {
-    build_site(&Config {
-        source_directory: PathBuf::from(match &*std::env::args().collect::<Vec<String>>() {
-            [_, path, ..] => path.as_str(),
-            _ => "./test-data/posts/",
-        }),
-        site_root: UrlBuf::from("file:///tmp/pages/0.html"),
-        base_template: PathBuf::from("./base-template.html"),
-        index_url: UrlBuf::from("file:///tmp/pages"),
-        index_template: PathBuf::from("./index-template.html"),
-        index_directory: PathBuf::from("/tmp/pages"),
-        index_page_size: 10,
-        posts_url: UrlBuf::from("file:///tmp/posts"),
-        posts_template: PathBuf::from("./post-template.html"),
-        posts_directory: PathBuf::from("/tmp/posts"),
-        threads: None,
-    })
-    .unwrap();
+fn main() -> Result<()> {
+    build_site(&serde_yaml::from_str(
+        r#"
+            source_directory: /Users/weberc2/projects/blog/posts
+            site_root:        file:///tmp/pages/0.html
+            index_url:        file:///tmp/pages
+            index_template:   [./base-template.html, ./index-template.html]
+            index_directory:  /tmp/pages
+            index_page_size:  10
+            posts_url:        file:///tmp/posts
+            posts_template:   [./base-template.html, ./posts-template.html]
+            posts_directory:  /tmp/posts
+        "#,
+    )?)
 }
