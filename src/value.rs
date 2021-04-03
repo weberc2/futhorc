@@ -83,6 +83,7 @@ impl From<UrlBuf> for Value {
 
 impl From<&UrlBuf> for Value {
     fn from(url: &UrlBuf) -> Value {
-        Value::from(url.as_ref())
+        let url: &Url = url;
+        Value::from(url)
     }
 }

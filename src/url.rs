@@ -66,7 +66,8 @@ impl UrlBuf {
 
 impl std::fmt::Display for UrlBuf {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        self.as_ref().fmt(f)
+        let url: &Url = self;
+        url.fmt(f)
     }
 }
 
@@ -87,6 +88,14 @@ impl From<&str> for UrlBuf {
     #[inline]
     fn from(s: &str) -> UrlBuf {
         UrlBuf(s.to_owned())
+    }
+}
+
+impl AsRef<str> for UrlBuf {
+    #[inline]
+    fn as_ref(&self) -> &str {
+        let url: &Url = self;
+        url.as_ref()
     }
 }
 
