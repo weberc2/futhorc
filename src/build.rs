@@ -1,3 +1,4 @@
+use crate::config::Config;
 use crate::page::*;
 use crate::post::*;
 use crate::slice::*;
@@ -5,34 +6,13 @@ use crate::url::*;
 use crate::write::*;
 use anyhow::Result;
 use gtmpl::Template;
-use serde::Deserialize;
 use std::collections::HashMap;
-use std::fs::File;
 use std::io::Read;
-use std::path::{Path, PathBuf};
-
-#[derive(Deserialize)]
-pub struct Config {
-    pub source_directory: PathBuf,
-    pub site_root: UrlBuf,
-    pub index_url: UrlBuf,
-    pub index_template: Vec<PathBuf>,
-    pub index_directory: PathBuf,
-    pub index_page_size: usize,
-    pub posts_url: UrlBuf,
-    pub posts_template: Vec<PathBuf>,
-    pub posts_directory: PathBuf,
-    pub threads: Option<usize>,
-}
+use std::path::Path;
 
 pub fn build_site(config: &Config) -> Result<()> {
-    let threads = match config.threads {
-        Some(threads) => threads,
-        None => num_cpus::get(),
-    };
-
     // collect all posts
-    let posts: Vec<Post<Tag>> = parse_posts(&config.source_directory, threads)?
+    let posts: Vec<Post<Tag>> = parse_posts(&config.posts_source_directory, config.threads)?
         .into_iter()
         .map(|p| p.convert_tags(&config.index_url))
         .collect();
@@ -48,9 +28,9 @@ pub fn build_site(config: &Config) -> Result<()> {
         &config.index_directory,
         &index_template,
         &config.posts_url,
-        &config.site_root,
+        &config.home_page,
         config.index_page_size,
-        threads,
+        config.threads,
     )?;
 
     // render post pages
@@ -58,8 +38,8 @@ pub fn build_site(config: &Config) -> Result<()> {
         post_pages(&posts, &config.posts_url).into_iter(),
         &config.posts_directory,
         &posts_template,
-        &config.site_root,
-        threads,
+        &config.home_page,
+        config.threads,
     )
 }
 
@@ -69,7 +49,7 @@ fn render_indices(
     index_directory: &Path,
     index_template: &Template,
     posts_url: &Url,
-    site_root: &Url,
+    home_page: &Url,
     page_size: usize,
     threads: usize,
 ) -> anyhow::Result<()> {
@@ -81,7 +61,7 @@ fn render_indices(
             index_url,
             index_directory,
             index_template,
-            site_root,
+            home_page,
             page_size,
             threads,
         )?;
@@ -96,7 +76,7 @@ fn render_index(
     index_url: &Url,
     index_directory: &Path,
     index_template: &Template,
-    site_root: &Url,
+    home_page: &Url,
     page_size: usize,
     threads: usize,
 ) -> anyhow::Result<()> {
@@ -111,7 +91,7 @@ fn render_index(
         ),
         &index_directory.join(&tag),
         index_template,
-        site_root,
+        home_page,
         threads,
     )
 }
@@ -198,7 +178,8 @@ fn build_indices<'a>(posts: &'a [Post<Tag>]) -> HashMap<String, Vec<&'a Post<Tag
 fn parse_template<'a, P: AsRef<Path>>(template_files: impl Iterator<Item = P>) -> Result<Template> {
     let mut contents = String::new();
     for template_file in template_files {
-        File::open(template_file)?.read_to_string(&mut contents)?;
+        use crate::util::open;
+        open(template_file.as_ref(), "template")?.read_to_string(&mut contents)?;
         contents.push(' ');
     }
     let mut template = Template::default();
