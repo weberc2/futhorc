@@ -172,6 +172,17 @@ fn index_pages<'a>(
     page_size: usize,
     base_url: &'a Url,
 ) -> impl Iterator<Item = Page<Slice<'a, PostSummary>>> {
+    fn identify(page_number: usize) -> String {
+        match page_number {
+            0 => "index".to_string(),
+            _ => page_number.to_string(),
+        }
+    }
+
+    fn identify_url(base_url: &Url, page_number: usize) -> UrlBuf {
+        base_url.join(format!("{}.html", identify(page_number)))
+    }
+
     let total_pages = match posts.len() % page_size {
         0 => posts.len() / page_size,
         _ => posts.len() / page_size + 1,
@@ -181,14 +192,14 @@ fn index_pages<'a>(
         .enumerate()
         .map(move |(page_number, posts)| Page {
             item: Slice::new(posts),
-            id: format!("{}", page_number),
+            id: identify(page_number),
             prev: match page_number {
                 0 => None,
-                _ => Some(base_url.join(format!("{}.html", page_number - 1))),
+                _ => Some(identify_url(base_url, page_number - 1)),
             },
             next: match page_number + 1 < total_pages {
                 false => None,
-                true => Some(base_url.join(format!("{}.html", page_number + 1))),
+                true => Some(identify_url(base_url, page_number + 1)),
             },
         })
 }
