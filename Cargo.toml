@@ -1,5 +1,5 @@
 [package]
-name = "rust-static-site-generator"
+name = "futhorc"
 version = "0.1.0"
 authors = ["Craig Weber <weberc2@gmail.com>"]
 edition = "2018"
@@ -19,3 +19,4 @@ slug = "0.1.4"
 crossbeam-channel = "0.5.0"
 crossbeam = "0.8.0"
 num_cpus = "1.13.0"
+clap = "2.33.3"
