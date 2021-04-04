@@ -1,6 +1,6 @@
 use crate::url::{Url, UrlBuf};
 use anyhow::{anyhow, Result};
-use pulldown_cmark::{html, Options, Parser};
+use pulldown_cmark::{self, html, Event, Options, Parser};
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
 use serde_yaml;
@@ -149,10 +149,14 @@ impl Post<Unicase> {
         options.insert(Options::ENABLE_STRIKETHROUGH);
         options.insert(Options::ENABLE_TABLES);
         options.insert(Options::ENABLE_TASKLISTS);
-        html::push_html(
-            &mut post.body,
-            Parser::new_ext(&input[body_start..], options),
-        );
+        let parser = Parser::new_ext(&input[body_start..], options).map(|ev| match ev {
+            Event::Start(tag) => Event::Start(match tag {
+                pulldown_cmark::Tag::Heading(s) => pulldown_cmark::Tag::Heading(s + 2),
+                _ => tag,
+            }),
+            _ => ev,
+        });
+        html::push_html(&mut post.body, parser);
         Ok(post)
     }
 }
