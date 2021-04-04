@@ -1,6 +1,7 @@
+use crate::htmlrenderer::push_html;
 use crate::url::{Url, UrlBuf};
 use anyhow::{anyhow, Result};
-use pulldown_cmark::{self, html, Event, Options, Parser};
+use pulldown_cmark::{self, Event, Options, Parser};
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
 use serde_yaml;
@@ -124,7 +125,7 @@ impl Post<Unicase> {
         }
     }
 
-    pub fn from_str(id: &str, input: &str) -> anyhow::Result<Self> {
+    pub fn from_str(id: &str, url: &Url, input: &str) -> anyhow::Result<Self> {
         fn frontmatter_indices(input: &str) -> anyhow::Result<(usize, usize, usize)> {
             const FENCE: &str = "---";
             if !input.starts_with(FENCE) {
@@ -163,7 +164,8 @@ impl Post<Unicase> {
             _ => ev,
         });
 
-        html::push_html(&mut post.body, fixed_subheading_sizes);
+        push_html(&mut post.body, fixed_subheading_sizes, url.as_str())?;
+        // pulldown_cmark::html::push_html(&mut post.body, fixed_subheading_sizes);
         Ok(post)
     }
 }
@@ -178,62 +180,23 @@ impl<T> Post<T> {
     }
 }
 
-pub fn parse_posts_parallel(dir: &Path, threads: usize) -> Result<Vec<Post<Unicase>>> {
-    use crossbeam_channel::unbounded;
-    use std::path::PathBuf;
-    use std::thread;
-
-    let (tx, rx) = unbounded::<(String, PathBuf)>();
-    let mut threads = Vec::with_capacity(threads);
-
-    for _ in 0..threads.capacity() {
-        let rx = rx.clone();
-        threads.push(thread::spawn(move || -> Result<Vec<Post<Unicase>>> {
-            let mut v: Vec<Post<Unicase>> = Vec::new();
-            for (file_name, full_path) in rx {
-                v.push(process_entry(&file_name, &full_path)?);
-            }
-            Ok(v)
-        }))
-    }
-
-    for result in read_dir(dir)? {
-        let entry = result?;
-        let os_file_name = entry.file_name();
-        let file_name = os_file_name.to_string_lossy();
-        if file_name.ends_with(MARKDOWN_EXTENSION) {
-            tx.send((file_name.to_string(), entry.path()))?;
-        }
-    }
-    drop(tx);
-
-    let mut posts: Vec<Post<Unicase>> = Vec::new();
-    for thread in threads {
-        posts.extend(thread.join().unwrap()?);
-    }
-    posts.sort_by(|a, b| b.date.cmp(&a.date));
-    Ok(posts)
-}
-
 const MARKDOWN_EXTENSION: &str = ".md";
 
-fn process_entry(file_name: &str, full_path: &Path) -> Result<Post<Unicase>> {
+fn process_entry<F>(file_name: &str, full_path: &Path, id_to_url: F) -> Result<Post<Unicase>>
+where
+    F: FnOnce(&str) -> UrlBuf,
+{
     let base_name = file_name.trim_end_matches(MARKDOWN_EXTENSION);
     let mut contents = String::new();
     File::open(full_path)?.read_to_string(&mut contents)?;
-    Post::from_str(base_name, &contents)
-}
-
-pub fn parse_posts(dir: &Path, threads: usize) -> Result<Vec<Post<Unicase>>> {
-    if threads < 2 {
-        parse_posts_singlethreaded(dir)
-    } else {
-        parse_posts_parallel(dir, threads)
-    }
+    Post::from_str(base_name, &id_to_url(base_name), &contents)
 }
 
 // Walks `dir` and returns a vector of posts ordered by date.
-pub fn parse_posts_singlethreaded(dir: &Path) -> Result<Vec<Post<Unicase>>> {
+pub fn parse_posts<F>(dir: &Path, id_to_url: F) -> Result<Vec<Post<Unicase>>>
+where
+    F: FnOnce(&str) -> UrlBuf + Copy,
+{
     let mut posts: Vec<Post<Unicase>> = Vec::new();
 
     for result in read_dir(dir)? {
@@ -241,7 +204,7 @@ pub fn parse_posts_singlethreaded(dir: &Path) -> Result<Vec<Post<Unicase>>> {
         let os_file_name = entry.file_name();
         let file_name = os_file_name.to_string_lossy();
         if file_name.ends_with(MARKDOWN_EXTENSION) {
-            posts.push(process_entry(&file_name, &entry.path())?);
+            posts.push(process_entry(&file_name, &entry.path(), id_to_url)?);
         }
     }
 

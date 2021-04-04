@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 
 mod build;
 mod config;
+mod htmlrenderer;
 mod page;
 mod post;
 mod slice;
