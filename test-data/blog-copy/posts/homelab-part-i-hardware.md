@@ -1,6 +1,7 @@
 ---
 Title: "Homelab Part I: Hardware"
 Date: 2021-01-14
+Tags: [homelab]
 ---
 
 For hardware, I settled on Raspberry Pi 4Bs. They support up to 8GB of RAM

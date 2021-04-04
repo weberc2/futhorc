@@ -4,9 +4,12 @@ use pulldown_cmark::{html, Parser};
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
 use serde_yaml;
-use std::fs::{read_dir, File};
 use std::io::prelude::*;
 use std::path::Path;
+use std::{
+    fmt::Display,
+    fs::{read_dir, File},
+};
 
 #[derive(Clone, Debug)]
 pub struct Tag {
@@ -49,6 +52,42 @@ impl Tag {
     }
 }
 
+pub struct Unicase(String);
+
+impl Default for Unicase {
+    fn default() -> Self {
+        Self(String::default())
+    }
+}
+
+impl<'de> Deserialize<'de> for Unicase {
+    fn deserialize<D>(deserializer: D) -> Result<Unicase, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s: String = String::deserialize(deserializer)?;
+        Ok(Unicase(s.to_lowercase()))
+    }
+}
+
+impl From<Unicase> for String {
+    fn from(unicase: Unicase) -> String {
+        unicase.0
+    }
+}
+
+impl From<&'_ Unicase> for String {
+    fn from(unicase: &Unicase) -> String {
+        unicase.0.clone()
+    }
+}
+
+impl Display for Unicase {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "{}", self.0)
+    }
+}
+
 #[derive(Deserialize)]
 pub struct Post<T> {
     #[serde(default)]
@@ -67,7 +106,7 @@ pub struct Post<T> {
     pub tags: Vec<T>,
 }
 
-impl Post<String> {
+impl Post<Unicase> {
     pub fn convert_tags(&self, tags_base_url: &Url) -> Post<Tag> {
         Post {
             id: self.id.clone(),
@@ -78,7 +117,7 @@ impl Post<String> {
                 .tags
                 .iter()
                 .map(|t| Tag {
-                    tag: t.clone(),
+                    tag: t.into(),
                     url: tags_base_url.join(format!("{}/0.html", t)),
                 })
                 .collect(),
@@ -102,7 +141,7 @@ impl Post<String> {
         }
 
         let (yaml_start, yaml_stop, body_start) = frontmatter_indices(input)?;
-        let mut post: Post<String> = serde_yaml::from_str(&input[yaml_start..yaml_stop])?;
+        let mut post: Post<Unicase> = serde_yaml::from_str(&input[yaml_start..yaml_stop])?;
         post.id = id.to_owned();
         html::push_html(&mut post.body, Parser::new(&input[body_start..]));
         Ok(post)
@@ -119,7 +158,7 @@ impl<T> Post<T> {
     }
 }
 
-pub fn parse_posts_parallel(dir: &Path, threads: usize) -> Result<Vec<Post<String>>> {
+pub fn parse_posts_parallel(dir: &Path, threads: usize) -> Result<Vec<Post<Unicase>>> {
     use crossbeam_channel::unbounded;
     use std::path::PathBuf;
     use std::thread;
@@ -129,8 +168,8 @@ pub fn parse_posts_parallel(dir: &Path, threads: usize) -> Result<Vec<Post<Strin
 
     for _ in 0..threads.capacity() {
         let rx = rx.clone();
-        threads.push(thread::spawn(move || -> Result<Vec<Post<String>>> {
-            let mut v: Vec<Post<String>> = Vec::new();
+        threads.push(thread::spawn(move || -> Result<Vec<Post<Unicase>>> {
+            let mut v: Vec<Post<Unicase>> = Vec::new();
             for (file_name, full_path) in rx {
                 v.push(process_entry(&file_name, &full_path)?);
             }
@@ -148,7 +187,7 @@ pub fn parse_posts_parallel(dir: &Path, threads: usize) -> Result<Vec<Post<Strin
     }
     drop(tx);
 
-    let mut posts: Vec<Post<String>> = Vec::new();
+    let mut posts: Vec<Post<Unicase>> = Vec::new();
     for thread in threads {
         posts.extend(thread.join().unwrap()?);
     }
@@ -158,14 +197,14 @@ pub fn parse_posts_parallel(dir: &Path, threads: usize) -> Result<Vec<Post<Strin
 
 const MARKDOWN_EXTENSION: &str = ".md";
 
-fn process_entry(file_name: &str, full_path: &Path) -> Result<Post<String>> {
+fn process_entry(file_name: &str, full_path: &Path) -> Result<Post<Unicase>> {
     let base_name = file_name.trim_end_matches(MARKDOWN_EXTENSION);
     let mut contents = String::new();
     File::open(full_path)?.read_to_string(&mut contents)?;
     Post::from_str(base_name, &contents)
 }
 
-pub fn parse_posts(dir: &Path, threads: usize) -> Result<Vec<Post<String>>> {
+pub fn parse_posts(dir: &Path, threads: usize) -> Result<Vec<Post<Unicase>>> {
     if threads < 2 {
         parse_posts_singlethreaded(dir)
     } else {
@@ -174,8 +213,8 @@ pub fn parse_posts(dir: &Path, threads: usize) -> Result<Vec<Post<String>>> {
 }
 
 // Walks `dir` and returns a vector of posts ordered by date.
-pub fn parse_posts_singlethreaded(dir: &Path) -> Result<Vec<Post<String>>> {
-    let mut posts: Vec<Post<String>> = Vec::new();
+pub fn parse_posts_singlethreaded(dir: &Path) -> Result<Vec<Post<Unicase>>> {
+    let mut posts: Vec<Post<Unicase>> = Vec::new();
 
     for result in read_dir(dir)? {
         let entry = result?;

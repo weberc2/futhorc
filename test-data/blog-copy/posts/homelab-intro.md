@@ -1,6 +1,7 @@
 ---
 Title: "Kubernetes + Raspberry Pi Homelab: Introduction"
 Date: 2021-01-03
+Tags: [homelab]
 ---
 
 As I alluded to in my [last post][0], I've finally decided to pull the trigger

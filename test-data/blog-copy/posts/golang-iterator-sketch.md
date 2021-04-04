@@ -1,6 +1,7 @@
 ---
 Title: Go generics iterator sketch
 Date: 2020-06-17
+Tags: [golang]
 ---
 
 The new Go generics proposal and playground gives us something to play with.

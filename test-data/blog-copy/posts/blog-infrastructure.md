@@ -1,6 +1,7 @@
 ---
 Title: New blog infrastructure
 Date: 2019-04-06
+Tags: [meta]
 ---
 
 I *finally* got around to automating the publishing of this blog. It hasn't

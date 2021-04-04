@@ -3,19 +3,13 @@
 {{- end }}
 
 {{- define "body" }}
-<h1><a href={{.site_root}}>Craig Weber</a></h1>
 {{- with .page }}
-<div>
-    <h2>{{.item.title}}</h2>
-    <p>{{.item.date}}</p>
-    {{range .item.tags}}<li><a href={{.url}}>{{.tag}}</a></li>{{end}}
-    {{.item.body}}
+<div class="post">
+    <h2 class="post-title">{{.item.title}}</h2>
+    {{- template "post-meta" .item }}
+    <div class="post-body">
+        {{.item.body}}
+    </div>
 </div>
-{{- if .prev }}
-<a href={{.prev}}>Previous</a>
-{{- end }}
-{{- if .next }}
-<a href={{.next}}>Next</a>
-{{- end }}
 {{- end }}
 {{- end }}

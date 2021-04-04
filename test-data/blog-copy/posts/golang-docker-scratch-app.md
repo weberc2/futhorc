@@ -1,6 +1,7 @@
 ---
 Title: Deploying Go apps on Docker scratch images
 Date: 2018-11-04
+Tags: [golang, docker]
 ---
 
 NOTE: If you're here for the TL;DR, skip to the bottom.

@@ -3,24 +3,20 @@
 {{ end }}
 
 {{- define "body" }}
-<h1><a href={{.site_root}}>Craig Weber</a></h1>
-{{- with .page }}
-{{- range .item }}
-<div>
-    <h2><a href={{.url}}>{{.title}}</a></h2>
-    <p>{{.date}}</p>
-    {{range .tags}}<li><a href={{.url}}>{{.tag}}</a></li>{{end}}
-    {{.summary}}
-    {{- if .summarized }}
-    <a href={{.url}}>Read More</a>
+<div id="post-list">
+    {{- with .page }}
+    {{- range .item }}
+    <div class="post">
+        <h2 class="post-title"><a href={{.url}}>{{.title}}</a></h2>
+        {{- template "post-meta" . }}
+        <div class="post-body">
+            {{.summary}}
+            {{- if .summarized }}
+            <a href={{.url}}>Read More</a>
+            {{- end }}
+        </div>
+    </div>
+    {{- end }}
     {{- end }}
 </div>
-{{- end }}
-{{- if .prev }}
-<a href={{.prev}}>Prev Page</a>
-{{- end }}
-{{- if .next }}
-<a href={{.next}}>Next Page</a>
-{{- end }}
-{{- end }}
 {{- end }}

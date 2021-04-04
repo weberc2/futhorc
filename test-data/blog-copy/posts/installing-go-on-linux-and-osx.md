@@ -1,6 +1,7 @@
 ---
 Title: Installing Go on Linux & OS X
 Date: 2016-01-19
+Tags: [golang, macos]
 ---
 
 This is a guide for Unix systems (OS X and Linux), but Windows users shouldn't

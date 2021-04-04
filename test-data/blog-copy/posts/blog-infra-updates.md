@@ -1,6 +1,7 @@
 ---
 Title: Blog infrastructure updates
 Date: 2020-03-28
+Tags: [meta]
 ---
 
 Another year, another blog update. BitBucket is deprecating their Mercurial

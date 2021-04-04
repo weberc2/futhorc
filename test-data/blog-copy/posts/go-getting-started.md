@@ -1,6 +1,7 @@
 ---
 Title: Getting started with Go, 2018 edition
 Date: 2018-10-14
+Tags: [golang]
 ---
 
 A little over 2.5 years ago, I wrote a tutorial about [installing Go][0]. Since
