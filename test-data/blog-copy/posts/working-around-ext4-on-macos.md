@@ -1,7 +1,7 @@
 ---
 Title: Working around ext4 on MacOS
 Date: 2021-01-23
-Tags: ["macOS", "ext4"]
+Tags: [macOS, ext4]
 ---
 
 One of the maddening things about MacOS is that it lacks ext4 file system

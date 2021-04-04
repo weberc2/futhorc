@@ -33,11 +33,14 @@ pub struct Config {
     pub home_page: UrlBuf,
     pub index_url: UrlBuf,
     pub index_template: Vec<PathBuf>,
-    pub index_directory: PathBuf,
+    pub index_output_directory: PathBuf,
     pub index_page_size: usize,
     pub posts_url: UrlBuf,
     pub posts_template: Vec<PathBuf>,
-    pub posts_directory: PathBuf,
+    pub posts_output_directory: PathBuf,
+    pub static_url: UrlBuf,
+    pub static_source_directory: PathBuf,
+    pub static_output_directory: PathBuf,
     pub threads: usize,
 }
 
@@ -94,8 +97,11 @@ impl Config {
                         .iter()
                         .map(|relpath| theme_dir.join(relpath))
                         .collect(),
-                    index_directory: output_directory.join("pages"),
-                    posts_directory: output_directory.join("posts"),
+                    index_output_directory: output_directory.join("pages"),
+                    posts_output_directory: output_directory.join("posts"),
+                    static_url: (&project.site_root).join("static"),
+                    static_source_directory: theme_dir.join("static"),
+                    static_output_directory: output_directory.join("static"),
                     index_page_size: project.index_page_size.0,
                     threads: match threads {
                         None => num_cpus::get(),

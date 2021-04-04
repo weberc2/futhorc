@@ -1,6 +1,7 @@
 ---
 Title: Changelog
 Date: 2021-01-16
+Tags: [homelab]
 ---
 
 I worked on this blog for several hours this weekend, releasing a new post,

@@ -1,6 +1,7 @@
 ---
 Title: Benchmarking Go and Python
 Date: 2016-02-06
+Tags: [golang, python]
 ---
 
 Sometimes I'm curious about the performance of different languages. At work, I

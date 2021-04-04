@@ -1,6 +1,7 @@
 ---
 Title: Force RGB-mode (fix pink tint) in macOS in 3 easy steps
 Date: 2021-01-04
+Tags: [macos]
 ---
 
 For whatever reason, macOS Catalina and Big Sur were both tinting my external

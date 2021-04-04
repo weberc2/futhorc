@@ -1,6 +1,7 @@
 ---
 Title: K3s + Tailscale
 Date: 2020-12-30
+Tags: [Homelab]
 ---
 
 I've recently been working on my Raspberry Pi Kubernetes cluster. I also use

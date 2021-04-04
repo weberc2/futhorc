@@ -11,6 +11,15 @@ use std::io::Read;
 use std::path::Path;
 
 pub fn build_site(config: &Config) -> Result<()> {
+    fn rmdir(dir: &Path) -> std::io::Result<()> {
+        match std::fs::remove_dir_all(dir) {
+            Ok(x) => Ok(x),
+            Err(e) => match e.kind() {
+                std::io::ErrorKind::NotFound => Ok(()),
+                _ => Err(e),
+            },
+        }
+    }
     // collect all posts
     let posts: Vec<Post<Tag>> = parse_posts(&config.posts_source_directory, config.threads)?
         .into_iter()
@@ -21,14 +30,20 @@ pub fn build_site(config: &Config) -> Result<()> {
     let index_template = parse_template(config.index_template.iter())?;
     let posts_template = parse_template(config.posts_template.iter())?;
 
+    // Blow away the old output directories (if they exists) so we don't have any collisions
+    rmdir(&config.index_output_directory)?;
+    rmdir(&config.posts_output_directory)?;
+    rmdir(&config.static_output_directory)?;
+
     // render index pages
     render_indices(
         &build_indices(&posts),
         &config.index_url,
-        &config.index_directory,
+        &config.index_output_directory,
         &index_template,
         &config.posts_url,
         &config.home_page,
+        &config.static_url,
         config.index_page_size,
         config.threads,
     )?;
@@ -36,11 +51,32 @@ pub fn build_site(config: &Config) -> Result<()> {
     // render post pages
     write_pages(
         post_pages(&posts, &config.posts_url).into_iter(),
-        &config.posts_directory,
+        &config.posts_output_directory,
         &posts_template,
         &config.home_page,
+        &config.static_url,
         config.threads,
+    )?;
+
+    // copy static directory
+    copy_dir(
+        &config.static_source_directory,
+        &config.static_output_directory,
     )
+}
+
+fn copy_dir(src: &Path, dst: &Path) -> Result<()> {
+    std::fs::create_dir(dst)?;
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        if entry.file_type()?.is_dir() {
+            copy_dir(src, &dst.join(entry.file_name()))?;
+        } else {
+            std::fs::copy(src.join(entry.file_name()), dst.join(entry.file_name()))?;
+        }
+    }
+
+    Ok(())
 }
 
 fn render_indices(
@@ -50,6 +86,7 @@ fn render_indices(
     index_template: &Template,
     posts_url: &Url,
     home_page: &Url,
+    static_root: &Url,
     page_size: usize,
     threads: usize,
 ) -> anyhow::Result<()> {
@@ -62,6 +99,7 @@ fn render_indices(
             index_directory,
             index_template,
             home_page,
+            static_root,
             page_size,
             threads,
         )?;
@@ -77,6 +115,7 @@ fn render_index(
     index_directory: &Path,
     index_template: &Template,
     home_page: &Url,
+    static_root: &Url,
     page_size: usize,
     threads: usize,
 ) -> anyhow::Result<()> {
@@ -92,6 +131,7 @@ fn render_index(
         &index_directory.join(&tag),
         index_template,
         home_page,
+        static_root,
         threads,
     )
 }

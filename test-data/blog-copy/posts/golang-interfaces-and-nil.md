@@ -1,6 +1,7 @@
 ---
 Title: Go's interfaces and nil by example
 Date: 2016-10-30
+Tags: [golang]
 ---
 
 I've recently been involved in conversations with a few Go developers who have
