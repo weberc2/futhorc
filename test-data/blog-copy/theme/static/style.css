@@ -256,3 +256,15 @@ th {
 tbody tr:nth-child(even){
     background-color: #eee;
 }
+
+.footnote-definition p {
+    display: inline;
+}
+
+.footnote-definition {
+    padding-top: 1em;
+    border-top: 1px dotted #666;
+    font-family: 'Nueton', Serif;
+    letter-spacing: 0.1em;
+    font-size: 14px;
+}

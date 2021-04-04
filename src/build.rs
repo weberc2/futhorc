@@ -21,10 +21,12 @@ pub fn build_site(config: &Config) -> Result<()> {
         }
     }
     // collect all posts
-    let posts: Vec<Post<Tag>> = parse_posts(&config.posts_source_directory, config.threads)?
-        .into_iter()
-        .map(|p| p.convert_tags(&config.index_url))
-        .collect();
+    let posts: Vec<Post<Tag>> = parse_posts(&config.posts_source_directory, move |id| {
+        config.posts_url.join(format!("{}.html", id))
+    })?
+    .into_iter()
+    .map(|p| p.convert_tags(&config.index_url))
+    .collect();
 
     // Parse the template files.
     let index_template = parse_template(config.index_template.iter())?;
