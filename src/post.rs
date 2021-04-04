@@ -118,7 +118,7 @@ impl Post<Unicase> {
                 .iter()
                 .map(|t| Tag {
                     tag: t.into(),
-                    url: tags_base_url.join(format!("{}/0.html", t)),
+                    url: tags_base_url.join(format!("{}/index.html", t)),
                 })
                 .collect(),
         }
