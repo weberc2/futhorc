@@ -1,6 +1,6 @@
 use crate::url::{Url, UrlBuf};
 use anyhow::{anyhow, Result};
-use pulldown_cmark::{html, Parser};
+use pulldown_cmark::{html, Options, Parser};
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
 use serde_yaml;
@@ -143,7 +143,16 @@ impl Post<Unicase> {
         let (yaml_start, yaml_stop, body_start) = frontmatter_indices(input)?;
         let mut post: Post<Unicase> = serde_yaml::from_str(&input[yaml_start..yaml_stop])?;
         post.id = id.to_owned();
-        html::push_html(&mut post.body, Parser::new(&input[body_start..]));
+        let mut options = Options::empty();
+        options.insert(Options::ENABLE_FOOTNOTES);
+        options.insert(Options::ENABLE_SMART_PUNCTUATION);
+        options.insert(Options::ENABLE_STRIKETHROUGH);
+        options.insert(Options::ENABLE_TABLES);
+        options.insert(Options::ENABLE_TASKLISTS);
+        html::push_html(
+            &mut post.body,
+            Parser::new_ext(&input[body_start..], options),
+        );
         Ok(post)
     }
 }
