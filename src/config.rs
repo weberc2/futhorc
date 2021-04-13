@@ -29,6 +29,7 @@ struct Theme {
     posts_template: Vec<PathBuf>,
 }
 
+#[derive(Debug)]
 pub struct Config {
     pub posts_source_directory: PathBuf,
     pub home_page: UrlBuf,

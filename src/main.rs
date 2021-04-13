@@ -16,7 +16,6 @@ mod url;
 mod value;
 mod write;
 
-#[derive(Debug)]
 pub enum Error {
     MissingSubcommand,
     Config(config::Error),
@@ -32,6 +31,12 @@ impl fmt::Display for Error {
             Error::Build(err) => err.fmt(f),
             Error::Env(err) => err.fmt(f),
         }
+    }
+}
+
+impl fmt::Debug for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
     }
 }
 
@@ -87,10 +92,8 @@ fn main() -> Result<(), Error> {
             _ => PathBuf::from(output),
         };
 
-        return Ok(build_site(
-            &Config::from_directory(project, &output, None).map_err(Error::Config)?,
-        )
-        .map_err(Error::Build)?);
+        let config = Config::from_directory(project, &output, None).map_err(Error::Config);
+        return Ok(build_site(&config?).map_err(Error::Build)?);
     }
     Err(Error::MissingSubcommand)
 }

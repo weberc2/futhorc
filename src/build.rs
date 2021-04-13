@@ -294,13 +294,17 @@ fn parse_template<'a, P: AsRef<Path>>(template_files: impl Iterator<Item = P>) -
     let mut contents = String::new();
     for template_file in template_files {
         use std::fs::File;
+        use std::io::Read;
         let template_file = template_file.as_ref();
-        File::open(template_file).map_err(|e| Error::OpenTemplateFile {
-            path: template_file.to_owned(),
-            err: e,
-        })?;
+        File::open(&template_file)
+            .map_err(|e| Error::OpenTemplateFile {
+                path: template_file.to_owned(),
+                err: e,
+            })?
+            .read_to_string(&mut contents)?;
         contents.push(' ');
     }
+
     let mut template = Template::default();
     template.parse(&contents).map_err(Error::ParseTemplate)?;
     Ok(template)
