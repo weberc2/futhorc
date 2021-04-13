@@ -1,16 +1,11 @@
 use crate::htmlrenderer::push_html;
 use crate::url::{Url, UrlBuf};
-use anyhow::{anyhow, Result};
 use pulldown_cmark::{self, Event, Options, Parser};
-use serde::de::Error;
 use serde::{Deserialize, Deserializer};
 use serde_yaml;
-use std::io::prelude::*;
+use std::fmt::{self, Display, Formatter};
+use std::fs::{read_dir, File};
 use std::path::Path;
-use std::{
-    fmt::Display,
-    fs::{read_dir, File},
-};
 
 #[derive(Clone, Debug)]
 pub struct Tag {
@@ -18,38 +13,24 @@ pub struct Tag {
     pub url: UrlBuf,
 }
 
-impl std::str::FromStr for Tag {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+impl<'de> Deserialize<'de> for Tag {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Tag, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
         Ok(Tag {
-            tag: slug::slugify(s),
+            tag: slug::slugify(&String::deserialize(deserializer)?),
             url: UrlBuf::new(),
         })
     }
 }
 
-impl<'de> Deserialize<'de> for Tag {
-    fn deserialize<D>(deserializer: D) -> Result<Tag, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        String::deserialize(deserializer)?
-            .parse::<Tag>()
-            .map_err(|e| D::Error::custom(format!("{}", e)))
-    }
-}
-
 impl Tag {
-    pub fn deserialize_seq<'de, D>(deserializer: D) -> Result<Vec<Tag>, D::Error>
+    pub fn deserialize_seq<'de, D>(deserializer: D) -> std::result::Result<Vec<Tag>, D::Error>
     where
         D: Deserializer<'de>,
     {
-        #[derive(Deserialize)]
-        struct Wrapper(#[serde(deserialize_with = "Tag::deserialize")] Tag);
-
-        let v = Vec::deserialize(deserializer)?;
-        Ok(v.into_iter().map(|Wrapper(a)| a).collect())
+        Ok(Vec::deserialize(deserializer)?.into_iter().collect())
     }
 }
 
@@ -62,12 +43,11 @@ impl Default for Unicase {
 }
 
 impl<'de> Deserialize<'de> for Unicase {
-    fn deserialize<D>(deserializer: D) -> Result<Unicase, D::Error>
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Unicase, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let s: String = String::deserialize(deserializer)?;
-        Ok(Unicase(s.to_lowercase()))
+        Ok(Unicase(String::deserialize(deserializer)?.to_lowercase()))
     }
 }
 
@@ -84,8 +64,8 @@ impl From<&'_ Unicase> for String {
 }
 
 impl Display for Unicase {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(formatter, "{}", self.0)
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
     }
 }
 
@@ -107,6 +87,50 @@ pub struct Post<T> {
     pub tags: Vec<T>,
 }
 
+pub type Result<T> = std::result::Result<T, Error>;
+
+#[derive(Debug)]
+pub enum Error {
+    FrontmatterMissingStartFence,
+    FrontmatterMissingEndFence,
+    DeserializeYaml(serde_yaml::Error),
+    Io(std::io::Error),
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match self {
+            Error::FrontmatterMissingStartFence => write!(f, "Post must begin with `---`"),
+            Error::FrontmatterMissingEndFence => write!(f, "Missing clossing `---`"),
+            Error::DeserializeYaml(err) => err.fmt(f),
+            Error::Io(err) => err.fmt(f),
+        }
+    }
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Error::FrontmatterMissingStartFence => None,
+            Error::FrontmatterMissingEndFence => None,
+            Error::DeserializeYaml(err) => Some(err),
+            Error::Io(err) => Some(err),
+        }
+    }
+}
+
+impl From<serde_yaml::Error> for Error {
+    fn from(err: serde_yaml::Error) -> Error {
+        Error::DeserializeYaml(err)
+    }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Error {
+        Error::Io(err)
+    }
+}
+
 impl Post<Unicase> {
     pub fn convert_tags(&self, tags_base_url: &Url) -> Post<Tag> {
         Post {
@@ -125,14 +149,14 @@ impl Post<Unicase> {
         }
     }
 
-    pub fn from_str(id: &str, url: &Url, input: &str) -> anyhow::Result<Self> {
-        fn frontmatter_indices(input: &str) -> anyhow::Result<(usize, usize, usize)> {
+    pub fn from_str(id: &str, url: &Url, input: &str) -> Result<Self> {
+        fn frontmatter_indices(input: &str) -> Result<(usize, usize, usize)> {
             const FENCE: &str = "---";
             if !input.starts_with(FENCE) {
-                return Err(anyhow!("Post must begin with `---`"));
+                return Err(Error::FrontmatterMissingStartFence);
             }
             match input[FENCE.len()..].find("---") {
-                None => Err(anyhow!("Missing closing `---`")),
+                None => Err(Error::FrontmatterMissingEndFence),
                 Some(offset) => Ok((
                     FENCE.len(),                        // yaml_start
                     FENCE.len() + offset,               // yaml_stop
@@ -165,7 +189,6 @@ impl Post<Unicase> {
         });
 
         push_html(&mut post.body, fixed_subheading_sizes, url.as_str())?;
-        // pulldown_cmark::html::push_html(&mut post.body, fixed_subheading_sizes);
         Ok(post)
     }
 }
@@ -186,6 +209,8 @@ fn process_entry<F>(file_name: &str, full_path: &Path, id_to_url: F) -> Result<P
 where
     F: FnOnce(&str) -> UrlBuf,
 {
+    use std::io::Read;
+
     let base_name = file_name.trim_end_matches(MARKDOWN_EXTENSION);
     let mut contents = String::new();
     File::open(full_path)?.read_to_string(&mut contents)?;

@@ -8,7 +8,6 @@ edition = "2018"
 
 [dependencies]
 chrono = "0.4.19"
-anyhow = "1.0.38"
 serde = { version = "1.0.124", features = ["derive"] }
 serde_yaml = "0.8.17"
 pulldown-cmark = "0.8.0"

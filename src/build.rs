@@ -1,22 +1,84 @@
 use crate::config::Config;
 use crate::page::*;
-use crate::post::*;
+use crate::post::{self, *};
 use crate::slice::*;
 use crate::url::*;
-use crate::write::*;
-use anyhow::Result;
+use crate::write::{self, *};
 use gtmpl::Template;
 use std::collections::HashMap;
-use std::io::Read;
-use std::path::Path;
+use std::fmt;
+use std::path::{Path, PathBuf};
+
+type Result<T> = std::result::Result<T, Error>;
+
+#[derive(Debug)]
+pub enum Error {
+    Write(write::Error),
+    Post(post::Error),
+    Clean { path: PathBuf, err: std::io::Error },
+    OpenTemplateFile { path: PathBuf, err: std::io::Error },
+    ParseTemplate(String),
+    Io(std::io::Error),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Error::Write(err) => err.fmt(f),
+            Error::Post(err) => err.fmt(f),
+            Error::Clean { path, err } => {
+                write!(f, "Cleaning directory '{}': {}", path.display(), err)
+            }
+            Error::OpenTemplateFile { path, err } => {
+                write!(f, "Opening template file '{}': {}", path.display(), err)
+            }
+            Error::ParseTemplate(err) => err.fmt(f),
+            Error::Io(err) => err.fmt(f),
+        }
+    }
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Error::Write(err) => Some(err),
+            Error::Post(err) => Some(err),
+            Error::Clean { path: _, err } => Some(err),
+            Error::OpenTemplateFile { path: _, err } => Some(err),
+            Error::ParseTemplate(_) => None,
+            Error::Io(err) => Some(err),
+        }
+    }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Error {
+        Error::Io(err)
+    }
+}
+
+impl From<post::Error> for Error {
+    fn from(err: post::Error) -> Error {
+        Error::Post(err)
+    }
+}
+
+impl From<write::Error> for Error {
+    fn from(err: write::Error) -> Error {
+        Error::Write(err)
+    }
+}
 
 pub fn build_site(config: &Config) -> Result<()> {
-    fn rmdir(dir: &Path) -> std::io::Result<()> {
+    fn rmdir(dir: &Path) -> Result<()> {
         match std::fs::remove_dir_all(dir) {
             Ok(x) => Ok(x),
             Err(e) => match e.kind() {
                 std::io::ErrorKind::NotFound => Ok(()),
-                _ => Err(e),
+                _ => Err(Error::Clean {
+                    path: dir.to_owned(),
+                    err: e,
+                }),
             },
         }
     }
@@ -91,7 +153,7 @@ fn render_indices(
     static_root: &Url,
     page_size: usize,
     threads: usize,
-) -> anyhow::Result<()> {
+) -> Result<()> {
     for (tag, index) in indices {
         render_index(
             index,
@@ -120,8 +182,8 @@ fn render_index(
     static_root: &Url,
     page_size: usize,
     threads: usize,
-) -> anyhow::Result<()> {
-    write_pages(
+) -> Result<()> {
+    Ok(write_pages(
         index_pages(
             &index
                 .into_iter()
@@ -135,7 +197,7 @@ fn render_index(
         home_page,
         static_root,
         threads,
-    )
+    )?)
 }
 
 fn post_pages<'a>(posts: &'a [Post<Tag>], base_url: &Url) -> Vec<Page<&'a Post<Tag>>> {
@@ -231,13 +293,15 @@ fn build_indices<'a>(posts: &'a [Post<Tag>]) -> HashMap<String, Vec<&'a Post<Tag
 fn parse_template<'a, P: AsRef<Path>>(template_files: impl Iterator<Item = P>) -> Result<Template> {
     let mut contents = String::new();
     for template_file in template_files {
-        use crate::util::open;
-        open(template_file.as_ref(), "template")?.read_to_string(&mut contents)?;
+        use std::fs::File;
+        let template_file = template_file.as_ref();
+        File::open(template_file).map_err(|e| Error::OpenTemplateFile {
+            path: template_file.to_owned(),
+            err: e,
+        })?;
         contents.push(' ');
     }
     let mut template = Template::default();
-    match template.parse(&contents) {
-        Err(e) => Err(anyhow::anyhow!(e)),
-        Ok(_) => Ok(template),
-    }
+    template.parse(&contents).map_err(Error::ParseTemplate)?;
+    Ok(template)
 }

@@ -2,8 +2,8 @@
 
 use crate::build::*;
 use crate::config::Config;
-use anyhow::Result;
 use clap::{App, Arg, SubCommand};
+use std::fmt;
 use std::path::{Path, PathBuf};
 
 mod build;
@@ -13,11 +13,29 @@ mod page;
 mod post;
 mod slice;
 mod url;
-mod util;
 mod value;
 mod write;
 
-fn main() -> Result<()> {
+#[derive(Debug)]
+pub enum Error {
+    MissingSubcommand,
+    Config(config::Error),
+    Build(build::Error),
+    Env(std::io::Error),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Error::MissingSubcommand => write!(f, "Missing subcommand. Try rerunning with --help"),
+            Error::Config(err) => err.fmt(f),
+            Error::Build(err) => err.fmt(f),
+            Error::Env(err) => err.fmt(f),
+        }
+    }
+}
+
+fn main() -> Result<(), Error> {
     const DEFAULT_PROJECT_DIRECTORY: &str = "$PWD";
     const DEFAULT_OUTPUT_DIRECTORY: &str = "$PWD/_output";
 
@@ -52,7 +70,7 @@ fn main() -> Result<()> {
         .get_matches();
 
     if let Some(matches) = matches.subcommand_matches("build") {
-        let cwd = std::env::current_dir()?;
+        let cwd = std::env::current_dir().map_err(Error::Env)?;
         let project = matches
             .value_of("PROJECT_DIRECTORY")
             .expect("Argument PROJECT_DIRECTORY is required.");
@@ -69,9 +87,10 @@ fn main() -> Result<()> {
             _ => PathBuf::from(output),
         };
 
-        return build_site(&Config::from_directory(project, &output, None)?);
+        return Ok(build_site(
+            &Config::from_directory(project, &output, None).map_err(Error::Config)?,
+        )
+        .map_err(Error::Build)?);
     }
-    Err(anyhow::anyhow!(
-        "Missing subcommand. Try rerunning with --help"
-    ))
+    Err(Error::MissingSubcommand)
 }

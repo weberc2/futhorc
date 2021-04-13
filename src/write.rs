@@ -1,12 +1,45 @@
-use anyhow::{anyhow, Result};
 use gtmpl::Template;
 use gtmpl_value::Value;
 use std::collections::HashMap;
+use std::fmt;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::page::*;
 use crate::url::Url;
+
+pub type Result<T> = std::result::Result<T, Error>;
+
+#[derive(Debug)]
+pub enum Error {
+    CreatingFile { path: PathBuf, err: std::io::Error },
+    CreatingDirectory { path: PathBuf, err: std::io::Error },
+    Template(String),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Error::CreatingFile { path, err } => {
+                write!(f, "Creating file '{}': {}", path.display(), err)
+            }
+            Error::CreatingDirectory { path, err } => {
+                write!(f, "Creating directory '{}': {}", path.display(), err)
+            }
+            Error::Template(err) => err.fmt(f),
+        }
+    }
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Error::CreatingFile { path: _, err } => Some(err),
+            Error::CreatingDirectory { path: _, err } => Some(err),
+            Error::Template(_) => None,
+        }
+    }
+}
 
 struct Context<'a, T2> {
     page: Page<T2>,
@@ -27,6 +60,13 @@ where
     }
 }
 
+fn create_dir_all(directory: &Path) -> Result<()> {
+    fs::create_dir_all(directory).map_err(|e| Error::CreatingDirectory {
+        path: directory.to_owned(),
+        err: e,
+    })
+}
+
 fn write_pages_singlethreaded<T, I>(
     pages: I,
     directory: &Path,
@@ -38,20 +78,21 @@ where
     Value: From<T>,
     I: Iterator<Item = Page<T>>,
 {
-    fs::create_dir_all(directory)?;
+    create_dir_all(directory)?;
+
     for context in pages.map(|page| Context {
         page,
         home_page,
         static_url,
     }) {
         let path = directory.join(format!("{}.html", context.page.id));
-        let ctx = match gtmpl::Context::from(context) {
-            Ok(ctx) => Ok(ctx),
-            Err(e) => Err(anyhow!(e)),
-        }?;
-        let mut file = fs::File::create(path)?;
+        let ctx = gtmpl::Context::from(context).unwrap();
+        let mut file = fs::File::create(&path).map_err(|e| Error::CreatingFile {
+            path: path.to_owned(),
+            err: e,
+        })?;
         if let Err(e) = template.execute(&mut file, &ctx) {
-            return Err(anyhow!(e));
+            return Err(Error::Template(e));
         }
     }
     Ok(())
@@ -70,7 +111,7 @@ where
     T: Sync + Send,
     I: Iterator<Item = Page<T>>,
 {
-    fs::create_dir_all(directory)?;
+    create_dir_all(directory)?;
 
     use crossbeam_channel::unbounded;
 
@@ -83,18 +124,17 @@ where
             handles.push(scope.spawn(move |_| -> Result<()> {
                 for page in rx {
                     let path = directory.join(format!("{}.html", page.id));
-                    let context = match gtmpl::Context::from(Context {
+                    let context = gtmpl::Context::from(Context {
                         page,
                         home_page,
                         static_url,
-                    }) {
-                        Ok(ctx) => Ok(ctx),
-                        Err(e) => Err(anyhow!(e)),
-                    }?;
-                    let mut file = fs::File::create(path)?;
-                    if let Err(e) = template.execute(&mut file, &context) {
-                        return Err(anyhow!(e));
-                    }
+                    })
+                    .unwrap();
+                    let mut file = fs::File::create(&path)
+                        .map_err(|e| Error::CreatingFile { path: path, err: e })?;
+                    template
+                        .execute(&mut file, &context)
+                        .map_err(Error::Template)?;
                 }
                 Ok(())
             }));
