@@ -5,7 +5,6 @@ use crate::slice::*;
 use crate::url::*;
 use crate::write::{self, *};
 use gtmpl::Template;
-use std::collections::HashMap;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
@@ -83,12 +82,11 @@ pub fn build_site(config: &Config) -> Result<()> {
         }
     }
     // collect all posts
-    let posts: Vec<Post<Tag>> = parse_posts(&config.posts_source_directory, move |id| {
-        config.posts_url.join(format!("{}.html", id))
-    })?
-    .into_iter()
-    .map(|p| p.convert_tags(&config.index_url))
-    .collect();
+    let posts: Vec<Post> = parse_posts_sorted(
+        &config.posts_source_directory,
+        move |id| config.posts_url.join(format!("{}.html", id)),
+        &config.index_url,
+    )?;
 
     // Parse the template files.
     let index_template = parse_template(config.index_template.iter())?;
@@ -99,19 +97,6 @@ pub fn build_site(config: &Config) -> Result<()> {
     rmdir(&config.posts_output_directory)?;
     rmdir(&config.static_output_directory)?;
 
-    // render index pages
-    render_indices(
-        &build_indices(&posts),
-        &config.index_url,
-        &config.index_output_directory,
-        &index_template,
-        &config.posts_url,
-        &config.home_page,
-        &config.static_url,
-        config.index_page_size,
-        config.threads,
-    )?;
-
     // render post pages
     write_pages(
         post_pages(&posts, &config.posts_url).into_iter(),
@@ -119,6 +104,19 @@ pub fn build_site(config: &Config) -> Result<()> {
         &posts_template,
         &config.home_page,
         &config.static_url,
+        config.threads,
+    )?;
+
+    // render index pages
+    render_indices(
+        posts,
+        &config.home_page,
+        &config.static_url,
+        &config.posts_url,
+        &config.index_url,
+        &config.index_output_directory,
+        &index_template,
+        config.index_page_size,
         config.threads,
     )?;
 
@@ -143,64 +141,111 @@ fn copy_dir(src: &Path, dst: &Path) -> Result<()> {
     Ok(())
 }
 
-fn render_indices(
-    indices: &HashMap<String, Vec<&Post<Tag>>>,
-    index_url: &Url,
-    index_directory: &Path,
-    index_template: &Template,
-    posts_url: &Url,
+pub fn render_indices(
+    posts: Vec<Post>,
     home_page: &Url,
-    static_root: &Url,
-    page_size: usize,
+    static_url: &Url,
+    posts_url: &Url,
+    index_url: &Url,
+    index_output_directory: &Path,
+    index_template: &Template,
+    index_page_size: usize,
     threads: usize,
 ) -> Result<()> {
-    for (tag, index) in indices {
-        render_index(
-            index,
-            tag,
-            posts_url,
-            index_url,
-            index_directory,
+    for (directory, pages) in Indices::from(
+        posts
+            .into_iter()
+            .map(|p| p.summarize(posts_url))
+            .collect::<Vec<PostSummary>>(),
+    )
+    .paginate(index_url, index_output_directory, index_page_size)
+    {
+        write_pages(
+            pages,
+            &directory,
             index_template,
             home_page,
-            static_root,
-            page_size,
+            static_url,
             threads,
         )?;
     }
     Ok(())
 }
 
-fn render_index(
-    index: &[&Post<Tag>],
-    tag: &str,
-    posts_url: &Url,
-    index_url: &Url,
-    index_directory: &Path,
-    index_template: &Template,
-    home_page: &Url,
-    static_root: &Url,
-    page_size: usize,
-    threads: usize,
-) -> Result<()> {
-    Ok(write_pages(
-        index_pages(
-            &index
-                .into_iter()
-                .map(|p| PostSummary::from((*p, posts_url)))
-                .collect::<Vec<PostSummary>>(),
-            page_size,
-            index_url,
-        ),
-        &index_directory.join(&tag),
-        index_template,
-        home_page,
-        static_root,
-        threads,
-    )?)
+struct Indices {
+    vec: Vec<(Unicase, Vec<PostSummary>)>,
 }
 
-fn post_pages<'a>(posts: &'a [Post<Tag>], base_url: &Url) -> Vec<Page<&'a Post<Tag>>> {
+impl From<Vec<PostSummary>> for Indices {
+    fn from(summaries: Vec<PostSummary>) -> Indices {
+        let mut indices = Indices::new();
+        for post in summaries.iter() {
+            for tag in post.tags.iter() {
+                indices.put(&tag.tag, post.clone())
+            }
+        }
+        // Include a "main index" consisting of all of the posts whose "tag" is the
+        // empty string.
+        indices.set(Unicase::default(), summaries);
+        indices
+    }
+}
+
+impl IntoIterator for Indices {
+    type Item = (Unicase, Vec<PostSummary>);
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.vec.into_iter()
+    }
+}
+
+impl Indices {
+    fn new() -> Indices {
+        Indices { vec: Vec::new() }
+    }
+
+    fn set(&mut self, tag: Unicase, summaries: Vec<PostSummary>) {
+        for (i, (t, _)) in self.vec.iter().enumerate() {
+            if tag.equals(t) {
+                self.vec[i] = (tag, summaries);
+                return;
+            }
+        }
+        self.vec.push((tag, summaries))
+    }
+
+    fn put(&mut self, tag: &Unicase, summary: PostSummary) {
+        for (t, summaries) in self.vec.iter_mut() {
+            if tag == t {
+                summaries.push(summary);
+                return;
+            }
+        }
+
+        self.vec.push((tag.clone(), vec![summary]))
+    }
+
+    fn paginate<'a>(
+        &'a self,
+        index_url: &'a Url,
+        index_directory: &'a Path,
+        page_size: usize,
+    ) -> impl Iterator<Item = (PathBuf, impl Iterator<Item = Page<Slice<'a, PostSummary>>>)> {
+        self.iter().map(move |(tag, index)| {
+            (
+                index_directory.join(tag),
+                index_pages(&index, page_size, &index_url),
+            )
+        })
+    }
+
+    fn iter(&self) -> impl Iterator<Item = &(Unicase, Vec<PostSummary>)> {
+        self.vec.iter()
+    }
+}
+
+fn post_pages<'a>(posts: &'a [Post], base_url: &Url) -> Vec<Page<&'a Post>> {
     match posts.len() {
         0 => Vec::new(),
         1 => vec![Page {
@@ -266,26 +311,6 @@ fn index_pages<'a>(
                 true => Some(identify_url(base_url, page_number + 1)),
             },
         })
-}
-
-fn build_indices<'a>(posts: &'a [Post<Tag>]) -> HashMap<String, Vec<&'a Post<Tag>>> {
-    let mut m: HashMap<String, Vec<&'a Post<Tag>>> = HashMap::new();
-    for post in posts {
-        for tag in post.tags.iter() {
-            match m.get_mut(&tag.tag) {
-                None => {
-                    m.insert(tag.tag.clone(), vec![post]);
-                }
-                Some(posts) => {
-                    posts.push(post);
-                }
-            };
-        }
-    }
-    // Include a "main index" consisting of all of the posts whose "tag" is the
-    // empty string.
-    m.insert(String::new(), posts.iter().collect());
-    m
 }
 
 // Loads the template file contents, appends them to `base_template`, and

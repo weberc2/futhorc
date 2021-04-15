@@ -9,7 +9,7 @@ use std::path::Path;
 
 #[derive(Clone, Debug)]
 pub struct Tag {
-    pub tag: String,
+    pub tag: Unicase,
     pub url: UrlBuf,
 }
 
@@ -19,7 +19,7 @@ impl<'de> Deserialize<'de> for Tag {
         D: Deserializer<'de>,
     {
         Ok(Tag {
-            tag: slug::slugify(&String::deserialize(deserializer)?),
+            tag: Unicase(slug::slugify(&String::deserialize(deserializer)?)),
             url: UrlBuf::new(),
         })
     }
@@ -34,7 +34,24 @@ impl Tag {
     }
 }
 
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Unicase(String);
+
+impl Unicase {
+    pub fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
+
+    pub fn equals(&self, other: &Unicase) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl AsRef<Path> for Unicase {
+    fn as_ref(&self) -> &Path {
+        self.0.as_ref()
+    }
+}
 
 impl Default for Unicase {
     fn default() -> Self {
@@ -69,8 +86,31 @@ impl Display for Unicase {
     }
 }
 
-#[derive(Deserialize)]
-pub struct Post<T> {
+/// Summary represents a summarized post body.
+#[derive(Clone)]
+pub struct Summary {
+    /// `url` is a reference to the full post.
+    pub url: UrlBuf,
+
+    /// `summary` is the body up to the `<!-- more -->` tag. If there is no such
+    /// tag, then `summary` is the full post body. Whether or not the tag was
+    /// found is stored as a boolean in [`summarized`].
+    pub summary: String,
+
+    /// `summarized` indicates whether or not a `<!-- more -->` tag was found.
+    /// This is useful for displaying an optional "Read More" link.
+    pub summarized: bool,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct RawPost(_Post<String, Unicase>);
+
+pub type PostSummary = _Post<Summary, Tag>;
+
+pub type Post = _Post<String, Tag>;
+
+#[derive(Deserialize, Clone)]
+pub struct _Post<B, T> {
     #[serde(default)]
     pub id: String,
 
@@ -81,7 +121,7 @@ pub struct Post<T> {
     pub date: String,
 
     #[serde(default)]
-    pub body: String,
+    pub body: B,
 
     #[serde(default, rename = "Tags")]
     pub tags: Vec<T>,
@@ -131,19 +171,43 @@ impl From<std::io::Error> for Error {
     }
 }
 
-impl Post<Unicase> {
-    pub fn convert_tags(&self, tags_base_url: &Url) -> Post<Tag> {
+impl Post {
+    pub fn summarize(self, posts_base_url: &Url) -> PostSummary {
+        PostSummary {
+            title: self.title,
+            date: self.date,
+            body: match self.body.find("<!-- more -->") {
+                Some(i) => Summary {
+                    url: posts_base_url.join(&self.id),
+                    summary: self.body[..i].to_owned(),
+                    summarized: true,
+                },
+                None => Summary {
+                    url: posts_base_url.join(&self.id),
+                    summary: self.body,
+                    summarized: false,
+                },
+            },
+            id: self.id,
+            tags: self.tags,
+        }
+    }
+}
+
+impl RawPost {
+    pub fn finalize(self, tags_base_url: &Url) -> Post {
         Post {
-            id: self.id.clone(),
-            title: self.title.clone(),
-            date: self.date.clone(),
-            body: self.body.clone(),
+            id: self.0.id,
+            title: self.0.title,
+            date: self.0.date,
+            body: self.0.body,
             tags: self
+                .0
                 .tags
-                .iter()
+                .into_iter()
                 .map(|t| Tag {
-                    tag: t.into(),
-                    url: tags_base_url.join(format!("{}/index.html", t)),
+                    url: tags_base_url.join(format!("{}/index.html", &t)),
+                    tag: t,
                 })
                 .collect(),
         }
@@ -166,8 +230,8 @@ impl Post<Unicase> {
         }
 
         let (yaml_start, yaml_stop, body_start) = frontmatter_indices(input)?;
-        let mut post: Post<Unicase> = serde_yaml::from_str(&input[yaml_start..yaml_stop])?;
-        post.id = id.to_owned();
+        let mut post: RawPost = serde_yaml::from_str(&input[yaml_start..yaml_stop])?;
+        post.0.id = id.to_owned();
         let mut options = Options::empty();
         options.insert(Options::ENABLE_FOOTNOTES);
         options.insert(Options::ENABLE_SMART_PUNCTUATION);
@@ -188,79 +252,69 @@ impl Post<Unicase> {
             _ => ev,
         });
 
-        push_html(&mut post.body, fixed_subheading_sizes, url.as_str())?;
+        push_html(&mut post.0.body, fixed_subheading_sizes, url.as_str())?;
         Ok(post)
     }
 }
 
-impl<T> Post<T> {
-    pub fn summary(&self) -> (&str, bool) {
-        const FOLD_TAG: &str = "<!-- more -->";
-        match self.body.find(FOLD_TAG) {
-            Some(i) => (&self.body[..i], true),
-            None => (&self.body, false),
-        }
-    }
-}
-
-const MARKDOWN_EXTENSION: &str = ".md";
-
-fn process_entry<F>(file_name: &str, full_path: &Path, id_to_url: F) -> Result<Post<Unicase>>
-where
-    F: FnOnce(&str) -> UrlBuf,
-{
-    use std::io::Read;
-
-    let base_name = file_name.trim_end_matches(MARKDOWN_EXTENSION);
-    let mut contents = String::new();
-    File::open(full_path)?.read_to_string(&mut contents)?;
-    Post::from_str(base_name, &id_to_url(base_name), &contents)
-}
-
-// Walks `dir` and returns a vector of posts ordered by date.
-pub fn parse_posts<F>(dir: &Path, id_to_url: F) -> Result<Vec<Post<Unicase>>>
+fn parse_raw_posts<F>(
+    directory: &Path,
+    id_to_url: F,
+) -> Result<impl Iterator<Item = Result<RawPost>>>
 where
     F: FnOnce(&str) -> UrlBuf + Copy,
 {
-    let mut posts: Vec<Post<Unicase>> = Vec::new();
+    use std::io::Read;
+    const MARKDOWN_EXTENSION: &str = ".md";
 
-    for result in read_dir(dir)? {
-        let entry = result?;
-        let os_file_name = entry.file_name();
-        let file_name = os_file_name.to_string_lossy();
-        if file_name.ends_with(MARKDOWN_EXTENSION) {
-            posts.push(process_entry(&file_name, &entry.path(), id_to_url)?);
+    Ok(read_dir(directory)?.filter_map(move |result| match result {
+        Err(e) => Some(Err(Error::Io(e))),
+        Ok(entry) => {
+            let os_file_name = entry.file_name();
+            let file_name = os_file_name.to_string_lossy();
+            if file_name.ends_with(MARKDOWN_EXTENSION) {
+                let base_name = file_name.trim_end_matches(MARKDOWN_EXTENSION);
+                let mut contents = String::new();
+                match File::open(entry.path()) {
+                    Err(e) => Some(Err(Error::Io(e))),
+                    Ok(mut file) => match file.read_to_string(&mut contents) {
+                        Err(e) => Some(Err(Error::Io(e))),
+                        Ok(_) => Some(RawPost::from_str(
+                            base_name,
+                            &id_to_url(base_name),
+                            &contents,
+                        )),
+                    },
+                }
+            } else {
+                None
+            }
         }
-    }
+    }))
+}
 
+pub fn parse_posts<'a, F>(
+    dir: &'a Path,
+    id_to_url: F,
+    tags_base_url: &'a Url,
+) -> Result<impl Iterator<Item = Result<Post>> + 'a>
+where
+    F: FnOnce(&str) -> UrlBuf + Copy + 'a,
+{
+    Ok(
+        parse_raw_posts(dir, id_to_url)?.map(move |result| match result {
+            Err(e) => Err(e),
+            Ok(p) => Ok(p.finalize(tags_base_url)),
+        }),
+    )
+}
+
+// Walks `dir` and returns a vector of posts ordered by date.
+pub fn parse_posts_sorted<F>(dir: &Path, id_to_url: F, tags_base_url: &Url) -> Result<Vec<Post>>
+where
+    F: FnOnce(&str) -> UrlBuf + Copy,
+{
+    let mut posts = parse_posts(dir, id_to_url, tags_base_url)?.collect::<Result<Vec<Post>>>()?;
     posts.sort_by(|a, b| b.date.cmp(&a.date));
-
     Ok(posts)
-}
-
-#[derive(Clone)]
-pub struct PostSummary {
-    pub id: String,
-    pub url: UrlBuf,
-    pub title: String,
-    pub date: String,
-    pub summary: String,
-    pub summarized: bool,
-    pub tags: Vec<Tag>,
-}
-
-impl From<(&Post<Tag>, &Url)> for PostSummary {
-    fn from(tuple: (&Post<Tag>, &Url)) -> PostSummary {
-        let (p, base_url) = tuple;
-        let (summary, summarized) = p.summary();
-        PostSummary {
-            id: p.id.clone(),
-            url: base_url.join(&format!("{}.html", p.id)),
-            title: p.title.clone(),
-            date: p.date.clone(),
-            summary: summary.to_owned(),
-            summarized: summarized,
-            tags: p.tags.clone(),
-        }
-    }
 }

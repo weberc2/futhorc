@@ -1,4 +1,5 @@
 #![feature(array_windows)]
+#![feature(map_into_keys_values)]
 
 use crate::build::*;
 use crate::config::Config;

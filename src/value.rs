@@ -18,11 +18,11 @@ impl From<&PostSummary> for Value {
     fn from(p: &PostSummary) -> Value {
         let mut m: HashMap<String, Value> = HashMap::new();
         m.insert("id".to_owned(), (&p.id).into());
-        m.insert("url".to_owned(), (&p.url).into());
+        m.insert("url".to_owned(), (&p.body.url).into());
         m.insert("title".to_owned(), (&p.title).into());
         m.insert("date".to_owned(), (&p.date).into());
-        m.insert("summary".to_owned(), (&p.summary).into());
-        m.insert("summarized".to_owned(), Value::Bool(p.summarized));
+        m.insert("summary".to_owned(), (&p.body.summary).into());
+        m.insert("summarized".to_owned(), Value::Bool(p.body.summarized));
         m.insert("tags".to_owned(), (&p.tags).as_slice().into());
         Value::Object(m)
     }
@@ -37,8 +37,8 @@ impl From<Tag> for Value {
     }
 }
 
-impl From<&Post<Tag>> for Value {
-    fn from(p: &Post<Tag>) -> Value {
+impl From<&Post> for Value {
+    fn from(p: &Post) -> Value {
         let mut m: HashMap<String, Value> = HashMap::new();
         m.insert("id".to_owned(), (&p.id).into());
         m.insert("title".to_owned(), (&p.title).into());
@@ -85,5 +85,11 @@ impl From<&UrlBuf> for Value {
     fn from(url: &UrlBuf) -> Value {
         let url: &Url = url;
         Value::from(url)
+    }
+}
+
+impl From<&Unicase> for Value {
+    fn from(unicase: &Unicase) -> Value {
+        Value::from(unicase.as_str())
     }
 }
