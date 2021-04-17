@@ -4,7 +4,6 @@
 
 {{- define "body" }}
 <div id="post-list">
-    {{- with .page }}
     {{- range .item }}
     <div class="post">
         <h2 class="post-title"><a href={{.url}}>{{.title}}</a></h2>
@@ -16,7 +15,6 @@
             {{- end }}
         </div>
     </div>
-    {{- end }}
     {{- end }}
 </div>
 {{- end }}

@@ -64,6 +64,12 @@ impl UrlBuf {
     }
 }
 
+impl Default for UrlBuf {
+    fn default() -> UrlBuf {
+        UrlBuf(String::default())
+    }
+}
+
 impl std::fmt::Display for UrlBuf {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let url: &Url = self;

@@ -22,7 +22,6 @@
     <h1 id="site-header"><a id="site-title" href="{{.home_page}}">Craig Weber</a></h1>
     <div id="page" class="center-column">
         {{- template "body" . }}
-        {{- with .page }}
         <div id="pagination">
             {{- if .prev }}
             <div class="pagination" id="pagination-prev">
@@ -35,7 +34,6 @@
             </div>
             {{- end }}
         </div>
-        {{- end }}
     </div>
     <div id="footer">
         <div id="footer-content" class="center-column">

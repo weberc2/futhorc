@@ -43,7 +43,6 @@ pub struct Config {
     pub static_url: UrlBuf,
     pub static_source_directory: PathBuf,
     pub static_output_directory: PathBuf,
-    pub threads: usize,
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -109,27 +108,19 @@ impl From<std::io::Error> for Error {
 }
 
 impl Config {
-    pub fn from_directory(
-        dir: &Path,
-        output_directory: &Path,
-        threads: Option<usize>,
-    ) -> Result<Config> {
+    pub fn from_directory(dir: &Path, output_directory: &Path) -> Result<Config> {
         let path = dir.join("futhorc.yaml");
         if path.exists() {
-            Config::from_project_file(&path, output_directory, threads)
+            Config::from_project_file(&path, output_directory)
         } else {
-            match path.parent() {
-                Some(dir) => Config::from_directory(dir, output_directory, threads),
+            match dir.parent() {
+                Some(dir_) => Config::from_directory(dir_, output_directory),
                 None => Err(Error::MissingProjectFile(dir.to_owned())),
             }
         }
     }
 
-    pub fn from_project_file(
-        path: &Path,
-        output_directory: &Path,
-        threads: Option<usize>,
-    ) -> Result<Config> {
+    pub fn from_project_file(path: &Path, output_directory: &Path) -> Result<Config> {
         let project: Project =
             serde_yaml::from_reader(File::open(path).map_err(|e| Error::OpenProjectFile {
                 path: path.to_owned(),
@@ -166,10 +157,6 @@ impl Config {
                     static_source_directory: theme_dir.join("static"),
                     static_output_directory: output_directory.join("static"),
                     index_page_size: project.index_page_size.0,
-                    threads: match threads {
-                        None => num_cpus::get(),
-                        Some(threads) => threads,
-                    },
                 })
             }
         }
