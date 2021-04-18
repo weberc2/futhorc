@@ -1,3 +1,3 @@
 ---
-site_root: "file:///tmp"
+site_root: "http://localhost:8000"
 home_page: "pages/index.html"
