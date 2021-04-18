@@ -16,30 +16,6 @@ mod url;
 mod value;
 mod write;
 
-pub enum Error {
-    MissingSubcommand,
-    Config(config::Error),
-    Build(build::Error),
-    Env(std::io::Error),
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Error::MissingSubcommand => write!(f, "Missing subcommand. Try rerunning with --help"),
-            Error::Config(err) => err.fmt(f),
-            Error::Build(err) => err.fmt(f),
-            Error::Env(err) => err.fmt(f),
-        }
-    }
-}
-
-impl fmt::Debug for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(self, f)
-    }
-}
-
 fn main() -> Result<(), Error> {
     const DEFAULT_PROJECT_DIRECTORY: &str = "$PWD";
     const DEFAULT_OUTPUT_DIRECTORY: &str = "$PWD/_output";
@@ -96,4 +72,42 @@ fn main() -> Result<(), Error> {
         return Ok(build_site(&config?).map_err(Error::Build)?);
     }
     Err(Error::MissingSubcommand)
+}
+
+/// Error is the toplevel error type, with variants for issues loading the
+/// config, building the site, and general argument parsing.
+enum Error {
+    /// `MissingSubcommand` is represents a missing or incorrect subcommand.
+    MissingSubcommand,
+
+    /// `Config` represents errors loading the configuration.
+    Config(config::Error),
+
+    /// `Build` represents errors building the static site.
+    Build(build::Error),
+
+    /// `Env` represents errors parsing arguments from the process's environment.
+    Env(std::io::Error),
+}
+
+impl fmt::Display for Error {
+    /// `fmt` renders the error in text form.
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Error::MissingSubcommand => write!(f, "Missing subcommand. Try rerunning with --help"),
+            Error::Config(err) => err.fmt(f),
+            Error::Build(err) => err.fmt(f),
+            Error::Env(err) => err.fmt(f),
+        }
+    }
+}
+
+// Implement Debug by invoking Display::fmt for the error so the toplevel error
+// messages are prettier.
+impl fmt::Debug for Error {
+    /// `fmt` renders the error in text form. This just calls [`fmt::Display::fmt`] so
+    /// the toplevel errors are prettier.
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
+    }
 }
