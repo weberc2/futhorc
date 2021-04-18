@@ -20,6 +20,7 @@ jobs:
         toolchain: nightly
         override: true
         components: rustfmt, clippy
+    - uses: Swatinem/rust-cache@v1 # must follow toolchain installation
     
     - name: Run cargo check
       uses: actions-rs/cargo@v1
