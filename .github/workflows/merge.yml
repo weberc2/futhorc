@@ -82,6 +82,7 @@ jobs:
         echo "Bumping patch version"
         cargo bump patch --git-tag || true
         echo "Pushing git tags"
+        git push
         git push --tags || true
     - name: build
       run: |
