@@ -98,4 +98,4 @@ jobs:
         title: "Development Build"
         files: futhorc-amd64-linux-*
     - name: Publish
-      run: cargo login $CARGO_TOKEN && cargo publish
+      run: cargo login $CARGO_TOKEN && cargo publish --allow-dirty
