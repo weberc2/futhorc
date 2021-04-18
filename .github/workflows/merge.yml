@@ -3,12 +3,12 @@ name: Merge
 on:
   push:
     branches: [ master ]
-  # If `Cargo.toml` is the only file to change, it's probably because this
-  # action bumped the version, and we don't want this action to trigger a new
-  # run of itself creating an infinite loop of version bumps. To solve, we
-  # ignore changes to `Cargo.toml` for the purposes of the merge-to-master
-  # action.
-  paths-ignore: ["Cargo.toml"]
+    # If `Cargo.toml` is the only file to change, it's probably because this
+    # action bumped the version, and we don't want this action to trigger a new
+    # run of itself creating an infinite loop of version bumps. To solve, we
+    # ignore changes to `Cargo.toml` for the purposes of the merge-to-master
+    # action.
+    paths-ignore: ["Cargo.toml"]
 
 env:
   CARGO_TERM_COLOR: always
