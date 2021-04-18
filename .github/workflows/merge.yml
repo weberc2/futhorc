@@ -24,6 +24,7 @@ jobs:
         toolchain: nightly
         override: true
         components: rustfmt, clippy
+    - uses: Swatinem/rust-cache@v1 # must follow toolchain installation
     - name: Check
       uses: actions-rs/cargo@v1
       with:
@@ -40,6 +41,7 @@ jobs:
       with:
         toolchain: nightly
         override: true
+    - uses: Swatinem/rust-cache@v1 # must follow toolchain installation
     - run: cargo doc --verbose --features fail-on-warnings
 
   test:
@@ -51,6 +53,7 @@ jobs:
       with:
         toolchain: nightly
         override: true
+    - uses: Swatinem/rust-cache@v1 # must follow toolchain installation
     - name: Run tests
       run: cargo test --verbose --features fail-on-warnings
 
@@ -67,7 +70,7 @@ jobs:
         toolchain: nightly
         override: true
         components: rustfmt, clippy
-    - uses: Swatinem/rust-cache@v1
+    - uses: Swatinem/rust-cache@v1 # must follow toolchain installation
     - name: Bump version
       run: |
         set -eo pipefail
