@@ -7,7 +7,6 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-chrono = "0.4.19"
 serde = { version = "1.0.124", features = ["derive"] }
 serde_yaml = "0.8.17"
 pulldown-cmark = "0.8.0"
@@ -15,7 +14,4 @@ gtmpl = "0.6.0"
 gtmpl_derive = "0.4.0"
 gtmpl_value = "0.4.0"
 slug = "0.1.4"
-crossbeam-channel = "0.5.0"
-crossbeam = "0.8.0"
-num_cpus = "1.13.0"
 clap = "2.33.3"

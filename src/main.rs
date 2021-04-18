@@ -10,9 +10,8 @@ use std::path::{Path, PathBuf};
 mod build;
 mod config;
 mod htmlrenderer;
-mod page;
 mod post;
-mod slice;
+mod tag;
 mod url;
 mod value;
 mod write;
@@ -93,7 +92,7 @@ fn main() -> Result<(), Error> {
             _ => PathBuf::from(output),
         };
 
-        let config = Config::from_directory(project, &output, None).map_err(Error::Config);
+        let config = Config::from_directory(project, &output).map_err(Error::Config);
         return Ok(build_site(&config?).map_err(Error::Build)?);
     }
     Err(Error::MissingSubcommand)

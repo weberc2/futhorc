@@ -1,9 +1,8 @@
 {{- define "head" }}
-<title>{{.page.item.title}}</title>
+<title>{{.item.title}}</title>
 {{- end }}
 
 {{- define "body" }}
-{{- with .page }}
 <div class="post">
     <h2 class="post-title">{{.item.title}}</h2>
     {{- template "post-meta" .item }}
@@ -11,5 +10,4 @@
         {{.item.body}}
     </div>
 </div>
-{{- end }}
 {{- end }}
