@@ -109,7 +109,7 @@ pub enum Error {
     /// Returned for errors during parsing.
     Parse(ParseError),
 
-    /// Returned for errors writing [`Post`]s to disk as HTML files.
+    /// Returned for errors writing [`crate::post::Post`]s to disk as HTML files.
     Write(WriteError),
 
     /// Returned for I/O problems while cleaning output directories.
