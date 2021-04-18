@@ -16,7 +16,8 @@ impl Default for PageSize {
 }
 
 #[derive(Deserialize)]
-struct Project {
+struct Profile {
+    pub name: String,
     #[serde(default)]
     pub root_directory: PathBuf,
     pub site_root: UrlBuf,
@@ -24,6 +25,12 @@ struct Project {
 
     #[serde(default)]
     pub index_page_size: PageSize,
+}
+
+#[derive(Deserialize)]
+struct Project {
+    profiles: Vec<Profile>,
+    default: String,
 }
 
 #[derive(Deserialize)]
@@ -36,6 +43,9 @@ struct Theme {
 /// [`crate::build::build_site`].
 #[derive(Debug)]
 pub struct Config {
+    /// The absolute path to the root output directory.
+    pub root_output_directory: PathBuf,
+
     /// The absolute path to the directory in which the post source files (`.md`)
     /// are located.
     pub posts_source_directory: PathBuf,
@@ -91,6 +101,88 @@ pub struct Config {
     pub static_output_directory: PathBuf,
 }
 
+impl Config {
+    /// Loads a [`Config`] object from source and output directory parameters.
+    pub fn from_directory(
+        dir: &Path,
+        output_directory: &Path,
+        profile: Option<&str>,
+    ) -> Result<Config> {
+        let path = dir.join("futhorc.yaml");
+        if path.exists() {
+            Config::from_project_file(&path, output_directory, profile)
+        } else {
+            match dir.parent() {
+                Some(dir_) => Config::from_directory(dir_, output_directory, profile),
+                None => Err(Error::MissingProjectFile(dir.to_owned())),
+            }
+        }
+    }
+
+    /// Loads a [`Config`] object from project file path and output directory
+    /// path parameters.
+    pub fn from_project_file(
+        path: &Path,
+        output_directory: &Path,
+        profile: Option<&str>,
+    ) -> Result<Config> {
+        let project: Project =
+            serde_yaml::from_reader(File::open(path).map_err(|e| Error::OpenProjectFile {
+                path: path.to_owned(),
+                err: e,
+            })?)?;
+        let requested_profile = match profile {
+            Some(profile) => profile,
+            None => &project.default,
+        };
+
+        let profile = match project
+            .profiles
+            .iter()
+            .filter(|p| p.name == requested_profile)
+            .next()
+        {
+            None => Err(Error::UnknownProfile(requested_profile.to_owned())),
+            Some(p) => Ok(p),
+        }?;
+        match path.parent() {
+            None => Err(Error::MissingProjectDirectory(path.to_owned())),
+            Some(project_root) => {
+                let theme_dir = project_root.join("theme");
+                let theme_path = theme_dir.join("theme.yaml");
+                let theme_file = File::open(&theme_path).map_err(|e| Error::OpenThemeFile {
+                    path: theme_path,
+                    err: e,
+                })?;
+                let theme: Theme = serde_yaml::from_reader(theme_file)?;
+                Ok(Config {
+                    root_output_directory: output_directory.to_owned(),
+                    home_page: profile.site_root.join(&profile.home_page),
+                    posts_source_directory: project_root.join("posts"),
+                    index_url: (&profile.site_root).join("pages"),
+                    posts_url: (&profile.site_root).join("posts"),
+                    index_template: theme
+                        .index_template
+                        .iter()
+                        .map(|relpath| theme_dir.join(relpath))
+                        .collect(),
+                    posts_template: theme
+                        .posts_template
+                        .iter()
+                        .map(|relpath| theme_dir.join(relpath))
+                        .collect(),
+                    index_output_directory: output_directory.join("pages"),
+                    posts_output_directory: output_directory.join("posts"),
+                    static_url: (&profile.site_root).join("static"),
+                    static_source_directory: theme_dir.join("static"),
+                    static_output_directory: output_directory.join("static"),
+                    index_page_size: profile.index_page_size.0,
+                })
+            }
+        }
+    }
+}
+
 /// The result type for fallible configuration operations, namely parsing
 /// configuration files.
 type Result<T> = std::result::Result<T, Error>;
@@ -107,6 +199,10 @@ pub enum Error {
 
     /// Returned when the configuration files are malformed.
     DeserializeYaml(serde_yaml::Error),
+
+    /// Returned when the requested profile doesn't exist in the `futhorc.yaml`
+    /// project file.
+    UnknownProfile(String),
 
     /// Returned when there is a problem opening a theme file.
     OpenThemeFile { path: PathBuf, err: std::io::Error },
@@ -133,6 +229,13 @@ impl fmt::Display for Error {
                 path.display()
             ),
             Error::DeserializeYaml(err) => err.fmt(f),
+            Error::UnknownProfile(requested_profile) => {
+                write!(
+                    f,
+                    "Could not find profile '{}' in `futhorc.yaml`",
+                    requested_profile
+                )
+            }
             Error::OpenThemeFile { path, err } => {
                 write!(f, "Opening theme file '{}': {}", path.display(), err,)
             }
@@ -151,6 +254,7 @@ impl std::error::Error for Error {
             Error::MissingProjectFile(_) => None,
             Error::MissingProjectDirectory(_) => None,
             Error::DeserializeYaml(err) => Some(err),
+            Error::UnknownProfile(_) => None,
             Error::OpenThemeFile { path: _, err } => Some(err),
             Error::OpenProjectFile { path: _, err } => Some(err),
             Error::Io(err) => Some(err),
@@ -171,64 +275,5 @@ impl From<std::io::Error> for Error {
     /// `?` operator on fallible config parsing operations.
     fn from(err: std::io::Error) -> Error {
         Error::Io(err)
-    }
-}
-
-impl Config {
-    /// Loads a [`Config`] object from source and output directory parameters.
-    pub fn from_directory(dir: &Path, output_directory: &Path) -> Result<Config> {
-        let path = dir.join("futhorc.yaml");
-        if path.exists() {
-            Config::from_project_file(&path, output_directory)
-        } else {
-            match dir.parent() {
-                Some(dir_) => Config::from_directory(dir_, output_directory),
-                None => Err(Error::MissingProjectFile(dir.to_owned())),
-            }
-        }
-    }
-
-    /// Loads a [`Config`] object from project file path and output directory
-    /// path parameters.
-    pub fn from_project_file(path: &Path, output_directory: &Path) -> Result<Config> {
-        let project: Project =
-            serde_yaml::from_reader(File::open(path).map_err(|e| Error::OpenProjectFile {
-                path: path.to_owned(),
-                err: e,
-            })?)?;
-        match path.parent() {
-            None => Err(Error::MissingProjectDirectory(path.to_owned())),
-            Some(project_root) => {
-                let theme_dir = project_root.join("theme");
-                let theme_path = theme_dir.join("theme.yaml");
-                let theme_file = File::open(&theme_path).map_err(|e| Error::OpenThemeFile {
-                    path: theme_path,
-                    err: e,
-                })?;
-                let theme: Theme = serde_yaml::from_reader(theme_file)?;
-                Ok(Config {
-                    home_page: project.site_root.join(project.home_page),
-                    posts_source_directory: project_root.join("posts"),
-                    index_url: (&project.site_root).join("pages"),
-                    posts_url: (&project.site_root).join("posts"),
-                    index_template: theme
-                        .index_template
-                        .iter()
-                        .map(|relpath| theme_dir.join(relpath))
-                        .collect(),
-                    posts_template: theme
-                        .posts_template
-                        .iter()
-                        .map(|relpath| theme_dir.join(relpath))
-                        .collect(),
-                    index_output_directory: output_directory.join("pages"),
-                    posts_output_directory: output_directory.join("posts"),
-                    static_url: (&project.site_root).join("static"),
-                    static_source_directory: theme_dir.join("static"),
-                    static_output_directory: output_directory.join("static"),
-                    index_page_size: project.index_page_size.0,
-                })
-            }
-        }
     }
 }
