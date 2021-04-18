@@ -98,4 +98,6 @@ jobs:
         title: "Development Build"
         files: futhorc-amd64-linux-*
     - name: Publish
+      env:
+        CARGO_TOKEN: ${{ secrets.CARGO_TOKEN }}
       run: cargo login $CARGO_TOKEN && cargo publish --allow-dirty
