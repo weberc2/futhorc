@@ -9,8 +9,6 @@ on:
   # ignore changes to `Cargo.toml` for the purposes of the merge-to-master
   # action.
   paths-ignore: ["Cargo.toml"]
-  pull_request:
-    branches: [ master ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -35,10 +33,10 @@ jobs:
         command: check
     - name: Run tests
       run: cargo test --verbose --features fail-on-warnings
-    - name: Build docs
-      run: cargo doc --verbose --features fail-on-warnings
     - name: Lint
       run: cargo clippy -- --deny "warnings"
+    - name: Build docs
+      run: cargo doc --verbose --features fail-on-warnings
     - name: Build
       run: cargo build --verbose --features fail-on-warnings --release
     - name: Bump version
