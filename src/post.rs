@@ -152,8 +152,8 @@ impl<'a> Parser<'a> {
             .tags
             .iter()
             .map(|t| Tag {
-                tag: t.tag.clone(),
-                url: self.index_url.join(&t.tag).join("index.html"),
+                name: t.name.clone(),
+                url: self.index_url.join(&t.name).join("index.html"),
             })
             .collect();
         let mut options = Options::empty();

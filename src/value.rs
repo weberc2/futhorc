@@ -6,7 +6,7 @@ use std::collections::HashMap;
 impl From<&Tag> for Value {
     fn from(t: &Tag) -> Value {
         let mut m: HashMap<String, Value> = HashMap::new();
-        m.insert("tag".to_owned(), (&t.tag).into());
+        m.insert("tag".to_owned(), (&t.name).into());
         m.insert("url".to_owned(), (&t.url).into());
         Value::Object(m)
     }

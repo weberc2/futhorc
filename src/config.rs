@@ -33,7 +33,7 @@ struct Theme {
 }
 
 /// The complete configuration object, ready to be passed to
-/// [`build::build_site`].
+/// [`crate::build::build_site`].
 #[derive(Debug)]
 pub struct Config {
     /// The absolute path to the directory in which the post source files (`.md`)
@@ -160,7 +160,7 @@ impl std::error::Error for Error {
 
 impl From<serde_yaml::Error> for Error {
     /// Converts [`serde_yaml::Error`] into [`Error`]. This allows us to use the
-    /// `?` operator on functions that return [`Result`].
+    /// `?` operator on fallible config parsing operations.
     fn from(err: serde_yaml::Error) -> Error {
         Error::DeserializeYaml(err)
     }
@@ -168,7 +168,7 @@ impl From<serde_yaml::Error> for Error {
 
 impl From<std::io::Error> for Error {
     /// Converts [`std::io::Error`] into [`Error`]. This allows us to use the
-    /// `?` operator on functions that return [`Result`].
+    /// `?` operator on fallible config parsing operations.
     fn from(err: std::io::Error) -> Error {
         Error::Io(err)
     }

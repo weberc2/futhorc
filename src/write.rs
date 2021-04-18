@@ -1,5 +1,5 @@
-//! Takes [`Post`] objects created by the [`post`] module and turns them into
-//! index and post HTML files on the file system.
+//! Takes [`crate::post::Post`] objects created by the [`crate::post`] module and
+//! turns them into index and post HTML files on the file system.
 
 use crate::post::*;
 use crate::url::{Url, UrlBuf};
@@ -256,13 +256,13 @@ fn index_posts<'a>(base_url: &Url, base_directory: &Path, posts: &'a [Post]) -> 
 
     for post in posts {
         for tag in post.tags.iter() {
-            match indices.get_mut(&tag.tag) {
+            match indices.get_mut(&tag.name) {
                 None => {
                     indices.insert(
-                        tag.tag.to_owned(),
+                        tag.name.to_owned(),
                         Index {
-                            url: base_url.join(&tag.tag).join("index.html"),
-                            output_directory: base_directory.join(&tag.tag),
+                            url: base_url.join(&tag.name).join("index.html"),
+                            output_directory: base_directory.join(&tag.name),
                             posts: vec![post],
                         },
                     );
