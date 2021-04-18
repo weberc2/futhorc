@@ -1,8 +1,6 @@
 name: Rust
 
 on:
-  push:
-    branches: [ master ]
   pull_request:
     branches: [ master ]
 
@@ -27,11 +25,11 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: check
+    - name: Lint
+      run: cargo clippy -- --deny "warnings"
     - name: Build
       run: cargo build --verbose --features fail-on-warnings
     - name: Run tests
       run: cargo test --verbose --features fail-on-warnings
     - name: Build docs
       run: cargo doc --verbose --features fail-on-warnings
-    - name: Lint
-      run: cargo clippy -- --deny "warnings"
