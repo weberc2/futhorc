@@ -1,5 +1,8 @@
 [package]
 name = "futhorc"
+description = "A static site generator to learn Rust and to build my personal blog"
+license = "GPLv3"
+repository = "https://github.com/weberc2/futhorc"
 version = "0.1.0"
 authors = ["Craig Weber <weberc2@gmail.com>"]
 edition = "2018"
