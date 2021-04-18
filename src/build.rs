@@ -1,3 +1,8 @@
+//! Exports the [`build_site`] function which stitches together the high-level
+//! steps of building the output static site: parsing the posts
+//! ([`crate::post`]), rendering index and post pages ([`crate::write`]), and
+//! copying the static source directory into the static output directory.
+
 use crate::config::Config;
 use crate::post::{Error as ParseError, Parser as PostParser};
 use crate::write::{Error as WriteError, *};
@@ -5,66 +10,10 @@ use gtmpl::Template;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-type Result<T> = std::result::Result<T, Error>;
-
-#[derive(Debug)]
-pub enum Error {
-    Parse(ParseError),
-    Write(WriteError),
-    Clean { path: PathBuf, err: std::io::Error },
-    OpenTemplateFile { path: PathBuf, err: std::io::Error },
-    ParseTemplate(String),
-    Io(std::io::Error),
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Error::Parse(err) => err.fmt(f),
-            Error::Write(err) => err.fmt(f),
-            Error::Clean { path, err } => {
-                write!(f, "Cleaning directory '{}': {}", path.display(), err)
-            }
-            Error::OpenTemplateFile { path, err } => {
-                write!(f, "Opening template file '{}': {}", path.display(), err)
-            }
-            Error::ParseTemplate(err) => err.fmt(f),
-            Error::Io(err) => err.fmt(f),
-        }
-    }
-}
-
-impl std::error::Error for Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Error::Parse(err) => Some(err),
-            Error::Write(err) => Some(err),
-            Error::Clean { path: _, err } => Some(err),
-            Error::OpenTemplateFile { path: _, err } => Some(err),
-            Error::ParseTemplate(_) => None,
-            Error::Io(err) => Some(err),
-        }
-    }
-}
-
-impl From<std::io::Error> for Error {
-    fn from(err: std::io::Error) -> Error {
-        Error::Io(err)
-    }
-}
-
-impl From<ParseError> for Error {
-    fn from(err: ParseError) -> Error {
-        Error::Parse(err)
-    }
-}
-
-impl From<WriteError> for Error {
-    fn from(err: WriteError) -> Error {
-        Error::Write(err)
-    }
-}
-
+/// Builds the site from a [`Config`] object. This calls into
+/// [`PostParser::parse_posts`] and [`Writer::write_posts`] which do the
+/// heavy-lifting. This function also copies the static assets from source
+/// directory to the output directory.
 pub fn build_site(config: &Config) -> Result<()> {
     fn rmdir(dir: &Path) -> Result<()> {
         match std::fs::remove_dir_all(dir) {
@@ -149,4 +98,85 @@ fn parse_template<P: AsRef<Path>>(template_files: impl Iterator<Item = P>) -> Re
     let mut template = Template::default();
     template.parse(&contents).map_err(Error::ParseTemplate)?;
     Ok(template)
+}
+
+type Result<T> = std::result::Result<T, Error>;
+
+/// The error type for building a site. Errors can be during parsing, writing,
+/// cleaning output directories, parsing template files, and other I/O.
+#[derive(Debug)]
+pub enum Error {
+    /// Returned for errors during parsing.
+    Parse(ParseError),
+
+    /// Returned for errors writing [`crate::post::Post`]s to disk as HTML files.
+    Write(WriteError),
+
+    /// Returned for I/O problems while cleaning output directories.
+    Clean { path: PathBuf, err: std::io::Error },
+
+    /// Returned for I/O problems while opening template files.
+    OpenTemplateFile { path: PathBuf, err: std::io::Error },
+
+    /// Returned for errors parsing template files.
+    ParseTemplate(String),
+
+    /// Returned for other I/O errors.
+    Io(std::io::Error),
+}
+
+impl fmt::Display for Error {
+    /// Implements [`fmt::Display`] for [`Error`].
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Error::Parse(err) => err.fmt(f),
+            Error::Write(err) => err.fmt(f),
+            Error::Clean { path, err } => {
+                write!(f, "Cleaning directory '{}': {}", path.display(), err)
+            }
+            Error::OpenTemplateFile { path, err } => {
+                write!(f, "Opening template file '{}': {}", path.display(), err)
+            }
+            Error::ParseTemplate(err) => err.fmt(f),
+            Error::Io(err) => err.fmt(f),
+        }
+    }
+}
+
+impl std::error::Error for Error {
+    /// Implements [`std::error::Error`] for [`Error`].
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Error::Parse(err) => Some(err),
+            Error::Write(err) => Some(err),
+            Error::Clean { path: _, err } => Some(err),
+            Error::OpenTemplateFile { path: _, err } => Some(err),
+            Error::ParseTemplate(_) => None,
+            Error::Io(err) => Some(err),
+        }
+    }
+}
+
+impl From<std::io::Error> for Error {
+    /// Converts [`std::io::Error`]s into [`Error`]. This allows us to use the
+    /// `?` operator.
+    fn from(err: std::io::Error) -> Error {
+        Error::Io(err)
+    }
+}
+
+impl From<ParseError> for Error {
+    /// Converts [`ParseError`]s into [`Error`]. This allows us to use the `?`
+    /// operator.
+    fn from(err: ParseError) -> Error {
+        Error::Parse(err)
+    }
+}
+
+impl From<WriteError> for Error {
+    /// Converts [`WriteError`]s into [`Error`]. This allows us to use the `?`
+    /// operator.
+    fn from(err: WriteError) -> Error {
+        Error::Write(err)
+    }
 }

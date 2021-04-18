@@ -1,17 +1,14 @@
-// Needed to write our own push_html() to support footnotes in summaries.
-// pulldown_cmark::html::push_html() assumes that the footnote definition is on
-// the same page as the footnote reference, which is true for post pages, but
-// not for the index page (in cases where the footnote reference appears above
-// the fold).
+//! Implements a custom [`push_html`] to support footnotes in summaries.
+//! [`pulldown_cmark::html::push_html`] assumes that the footnote definition is
+//! on the same page as the footnote reference, which is true for post pages, but
+//! not for the index pages (in cases where the footnote reference appears above
+//! the fold in the post summary, but the footnote definition is at the bottom of
+//! the post page).
 
 use pulldown_cmark::escape::{escape_href, escape_html, StrWrite};
 use pulldown_cmark::{Alignment, CodeBlockKind, CowStr, Event, LinkType, Tag};
 use std::fmt::{self, Display};
 use std::io;
-
-trait Renderer<'a, W: StrWrite> {
-    fn on_event(&mut self, writer: &mut W, event: Event<'a>) -> io::Result<()>;
-}
 
 struct Adaptor<'a, T> {
     formatter: &'a mut T,
@@ -74,18 +71,20 @@ enum TableState {
     Body,
 }
 
+/// Renders markdown [`Event`]s into HTML. This is largely modeled after
+/// [`pulldown_cmark`]'s private [`HtmlWriter`
+/// struct](https://github.com/raphlinus/pulldown-cmark/blob/bf0a1a4938dbd2ec41c3add069b3d361d11731f4/src/html.rs#L36-L50).
 struct HtmlRenderer {
     table_alignments: Vec<Alignment>,
     table_state: TableState,
     table_cell_index: usize,
+
+    /// The prefix to prepend onto footnote links.
     footnote_prefix: String,
 }
 
-impl<'a, W> Renderer<'a, W> for HtmlRenderer
-where
-    W: StrWrite,
-{
-    fn on_event(&mut self, w: &mut W, event: Event<'a>) -> io::Result<()> {
+impl<'a> HtmlRenderer {
+    fn on_event<W: StrWrite>(&mut self, w: &mut W, event: Event<'a>) -> io::Result<()> {
         match event {
             Event::Start(tag) => self.on_start(w, tag),
             Event::End(tag) => self.on_end(w, tag),
@@ -269,6 +268,9 @@ impl<'a> HtmlRenderer {
     }
 }
 
+/// Converts [`Event`]s into an HTML string much like
+/// `pulldown_cmark::html::push_html` except that this also supports footnote
+/// prefixes. See the module description for more details.
 pub fn push_html<'a, I>(out: &mut String, events: I, footnote_prefix: &str) -> io::Result<()>
 where
     I: Iterator<Item = Event<'a>>,

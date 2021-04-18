@@ -2,6 +2,7 @@
 //! [`String`] or [`std::path::Path`] and [`std::path::PathBuf`] pairs. These are
 //! effectively newtypes for [`str`] and [`String`].
 
+use gtmpl::Value;
 use serde::{Deserialize, Deserializer};
 use std::ops::Deref;
 
@@ -159,5 +160,24 @@ impl<'de> Deserialize<'de> for UrlBuf {
         Ok(UrlBuf(
             String::deserialize(d)?.trim_end_matches('/').to_owned(),
         ))
+    }
+}
+
+impl From<&Url> for Value {
+    fn from(url: &Url) -> Value {
+        Value::String(url.to_string())
+    }
+}
+
+impl From<UrlBuf> for Value {
+    fn from(url: UrlBuf) -> Value {
+        Value::from(&url)
+    }
+}
+
+impl From<&UrlBuf> for Value {
+    fn from(url: &UrlBuf) -> Value {
+        let url: &Url = url;
+        Value::from(url)
     }
 }
