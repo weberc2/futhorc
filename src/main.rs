@@ -1,20 +1,8 @@
-#![feature(array_windows)]
-#![feature(map_into_keys_values)]
-
-use crate::build::*;
-use crate::config::Config;
 use clap::{App, Arg, SubCommand};
+use futhorc::build::{self, build_site};
+use futhorc::config::{self, Config};
 use std::fmt;
 use std::path::{Path, PathBuf};
-
-mod build;
-mod config;
-mod htmlrenderer;
-mod post;
-mod tag;
-mod url;
-mod value;
-mod write;
 
 fn main() -> Result<(), Error> {
     const DEFAULT_PROJECT_DIRECTORY: &str = "$PWD";
