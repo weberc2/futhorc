@@ -139,8 +139,7 @@ impl Config {
         let profile = match project
             .profiles
             .iter()
-            .filter(|p| p.name == requested_profile)
-            .next()
+            .find(|p| p.name == requested_profile)
         {
             None => Err(Error::UnknownProfile(requested_profile.to_owned())),
             Some(p) => Ok(p),
