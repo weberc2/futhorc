@@ -1,6 +1,7 @@
 //! Defines the [`Tag`] type, which represents a [`crate::post::Post`] tag.
 
 use crate::url::*;
+use gtmpl::Value;
 use serde::de::{Deserialize, Deserializer};
 use std::hash::{Hash, Hasher};
 
@@ -50,3 +51,14 @@ impl PartialEq for Tag {
     }
 }
 impl Eq for Tag {}
+
+impl From<&Tag> for Value {
+    /// Converts [`Tag`]s into [`Value`]s for templating.
+    fn from(t: &Tag) -> Value {
+        use std::collections::HashMap;
+        let mut m: HashMap<String, Value> = HashMap::new();
+        m.insert("tag".to_owned(), (&t.name).into());
+        m.insert("url".to_owned(), (&t.url).into());
+        Value::Object(m)
+    }
+}
