@@ -87,7 +87,7 @@ jobs:
       run: |
         set -eo pipefail
         cargo build --verbose --features fail-on-warnings --release
-        version="v$(cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "futhorc") | .version')""
+        version="v$(cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "futhorc") | .version')"
         mv target/release/futhorc futhorc-amd64-linux-$version
     - name: Pre-release
       uses: "marvinpinto/action-automatic-releases@latest"
