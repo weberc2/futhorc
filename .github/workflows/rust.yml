@@ -33,3 +33,5 @@ jobs:
       run: cargo test --verbose --features fail-on-warnings
     - name: Build docs
       run: cargo doc --verbose --features fail-on-warnings
+    - name: Lint
+      run: cargo clippy -- --deny "warnings"

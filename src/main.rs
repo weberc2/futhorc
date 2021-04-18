@@ -57,7 +57,7 @@ fn main() -> Result<(), Error> {
         };
 
         let config = Config::from_directory(project, &output).map_err(Error::Config);
-        return Ok(build_site(&config?).map_err(Error::Build)?);
+        return build_site(&config?).map_err(Error::Build);
     }
     Err(Error::MissingSubcommand)
 }

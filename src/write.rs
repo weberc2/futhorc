@@ -1,5 +1,5 @@
-//! Takes [`crate::post::Post`] objects created by the [`crate::post`] module and
-//! turns them into index and post HTML files on the file system.
+//! Takes [`Post`] objects created by the [`crate::post`] module and turns them
+//! into index and post HTML files on the file system.
 
 use crate::post::*;
 use crate::url::{Url, UrlBuf};
@@ -77,14 +77,13 @@ impl Writer<'_> {
             self.posts_template,
             self.index_template,
         )
-        .map(|page| {
+        .try_for_each(|page| {
             let dir = page.file_path.parent().unwrap(); // there should always be a dir
             if seen_dirs.insert(dir.to_owned()) {
                 std::fs::create_dir_all(dir)?;
             }
             self.write_page(&page)
         })
-        .collect()
     }
 }
 
@@ -161,7 +160,7 @@ fn post_pages<'a>(posts: &'a [Post], template: &'a Template) -> impl Iterator<It
             true => None,
             false => Some(posts[i + 1].url.clone()),
         },
-        template: template,
+        template,
     })
 }
 

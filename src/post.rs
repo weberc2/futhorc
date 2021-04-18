@@ -1,5 +1,5 @@
-//! The `post` module defines the [`Post`], [`Parser`], and [`Error`] types. It
-//! defines the logic for parsing posts from the file system into memory. See the
+//! Defines the [`Post`], [`Parser`], and [`Error`] types. Also defines the logic
+//! for parsing posts from the file system into memory. See the
 //! [`Post::to_value`] and [`Post::summarize`] for details on how posts are
 //! converted into template values.
 
