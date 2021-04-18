@@ -67,15 +67,24 @@ jobs:
         toolchain: nightly
         override: true
         components: rustfmt, clippy
-    - name: build
-      run: cargo build --verbose --features fail-on-warnings --release
+    - uses: Swatinem/rust-cache@v1
     - name: Bump version
       run: |
+        set -eo pipefail
+        echo "Installing cargo-bump"
         cargo install cargo-bump --verbose
+        echo "Updating git identity"
+        git config --global user.email "futhorc-merge-action@example.com"
+        git config --global user.name "Futhorc Merge Action"
         echo "Bumping patch version"
         cargo bump patch --git-tag
-        version="v$(cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "futhorc") | .version')""
+        echo "Pushing git tags"
         git push --tags
+    - name: build
+      run: |
+        set -eo pipefail
+        cargo build --verbose --features fail-on-warnings --release
+        version="v$(cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "futhorc") | .version')""
         mv target/release/futhorc futhorc-amd64-linux-$version
     - name: Pre-release
       uses: "marvinpinto/action-automatic-releases@latest"
