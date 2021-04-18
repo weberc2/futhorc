@@ -14,6 +14,46 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install latest nightly
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly
+        override: true
+        components: rustfmt, clippy
+    - name: Check
+      uses: actions-rs/cargo@v1
+      with:
+        command: check
+    - name: Lint
+      run: cargo clippy -- --deny "warnings"
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install latest nightly
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly
+        override: true
+    - run: cargo doc --verbose --features fail-on-warnings
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install latest nightly
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly
+        override: true
+    - name: Run tests
+      run: cargo test --verbose --features fail-on-warnings
+
   build:
 
     runs-on: ubuntu-latest
@@ -26,23 +66,11 @@ jobs:
         toolchain: nightly
         override: true
         components: rustfmt, clippy
-    
-    - name: Run cargo check
-      uses: actions-rs/cargo@v1
-      with:
-        command: check
-    - name: Run tests
-      run: cargo test --verbose --features fail-on-warnings
-    - name: Lint
-      run: cargo clippy -- --deny "warnings"
-    - name: Build docs
-      run: cargo doc --verbose --features fail-on-warnings
-    - name: Build
       run: cargo build --verbose --features fail-on-warnings --release
     - name: Bump version
       run: |
         cargo install cargo-bump
-        cargo bump minor
+        cargo bump patch
         version="v$(cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "futhorc") | .version')""
         git commit -m "Bumped version to $version"
         git tag "$version"
