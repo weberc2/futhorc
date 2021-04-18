@@ -1,3 +1,6 @@
+//! Takes [`Post`] objects created by the [`post`] module and turns them into
+//! index and post HTML files on the file system.
+
 use crate::post::*;
 use crate::url::{Url, UrlBuf};
 use gtmpl::{Template, Value};

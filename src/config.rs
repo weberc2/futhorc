@@ -1,3 +1,6 @@
+//! Contains the logic for collecting and consolidating the program's
+//! configuration.
+
 use crate::url::UrlBuf;
 use serde::Deserialize;
 use std::fmt;
@@ -29,35 +32,94 @@ struct Theme {
     posts_template: Vec<PathBuf>,
 }
 
+/// The complete configuration object, ready to be passed to
+/// [`build::build_site`].
 #[derive(Debug)]
 pub struct Config {
+    /// The absolute path to the directory in which the post source files (`.md`)
+    /// are located.
     pub posts_source_directory: PathBuf,
+
+    /// The fully-qualified URL to the site's home page. This comes from the
+    /// `futhorc.yaml` project file and is intended to be provided to the index
+    /// and post templates, e.g., to create a site-header link.
     pub home_page: UrlBuf,
+
+    /// The fully-qualified base URL for the index pages. The main index pages
+    /// will live at `{index_url}/index.html`, `{index_url}/1.html`, etc. The tag
+    /// index pages will live at `{index_url}/{tag_name}/index.html`,
+    /// `{index_url}/{tag_name}/1.html`, etc.
     pub index_url: UrlBuf,
+
+    /// The paths to index template files which will be concatenated and the result
+    /// parsed into a [`gtmpl::Template`] object.
     pub index_template: Vec<PathBuf>,
+
+    /// The absolute path to the output directory for index files. The main index
+    /// page files will live at `{index_output_directory}/index.html`,
+    /// `{index_output_directory}/1.html`, etc. The tag index page files will
+    /// live at `{index_output_directory}/{tag_name}/index.html`,
+    /// `{index_output_directory}/{tag_name}/1.html`, etc.
     pub index_output_directory: PathBuf,
+
+    /// The number of posts per index page. Defaults to 10.
     pub index_page_size: usize,
+
+    /// The fully-qualified base URL for post pages. E.g., for a post whose
+    /// source file is located at `{posts_source_directory}/foo/bar.md`, the URL
+    /// will be `{posts_url}/foo/bar.html`.
     pub posts_url: UrlBuf,
+
+    /// The paths to post template files which will be concatenated and the result
+    /// parsed into a [`gtmpl::Template`] object.
     pub posts_template: Vec<PathBuf>,
+
+    /// The fully-qualified base URL for post pages. E.g., for a post whose
+    /// source file is located at `{posts_source_directory}/foo/bar.md`, the URL
+    /// will be `{posts_url}/foo/bar.html`.
     pub posts_output_directory: PathBuf,
+
+    /// The fully-qualified base URL for static assets. E.g., a static asset
+    /// whose source file is located at `{static_source_directory}/style.css`
+    /// will have the URL, `{static_url}/style.css`.
     pub static_url: UrlBuf,
+
+    /// The absolute path to the source directory for static assets.
     pub static_source_directory: PathBuf,
+
+    /// The absolute path to the output directory for static assets.
     pub static_output_directory: PathBuf,
 }
 
+/// The result type for fallible configuration operations, namely parsing
+/// configuration files.
 type Result<T> = std::result::Result<T, Error>;
 
+/// The error type for fallible configuration operations, namely parsing
+/// configuration files.
 #[derive(Debug)]
 pub enum Error {
+    /// Returned when the project file can't be found.
     MissingProjectFile(PathBuf),
+
+    /// Returned when the project directory can't be determined.
     MissingProjectDirectory(PathBuf),
+
+    /// Returned when the configuration files are malformed.
     DeserializeYaml(serde_yaml::Error),
+
+    /// Returned when there is a problem opening a theme file.
     OpenThemeFile { path: PathBuf, err: std::io::Error },
+
+    /// Returned when there is a problem opening the project file.
     OpenProjectFile { path: PathBuf, err: std::io::Error },
+
+    /// Returned for other I/O errors.
     Io(std::io::Error),
 }
 
 impl fmt::Display for Error {
+    /// Implements [`std::fmt::Display`] for [`Error`].
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Error::MissingProjectFile(dir) => write!(
@@ -83,6 +145,7 @@ impl fmt::Display for Error {
 }
 
 impl std::error::Error for Error {
+    /// Implements [`std::error::Error`] for [`Error`].
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Error::MissingProjectFile(_) => None,
@@ -96,18 +159,23 @@ impl std::error::Error for Error {
 }
 
 impl From<serde_yaml::Error> for Error {
+    /// Converts [`serde_yaml::Error`] into [`Error`]. This allows us to use the
+    /// `?` operator on functions that return [`Result`].
     fn from(err: serde_yaml::Error) -> Error {
         Error::DeserializeYaml(err)
     }
 }
 
 impl From<std::io::Error> for Error {
+    /// Converts [`std::io::Error`] into [`Error`]. This allows us to use the
+    /// `?` operator on functions that return [`Result`].
     fn from(err: std::io::Error) -> Error {
         Error::Io(err)
     }
 }
 
 impl Config {
+    /// Loads a [`Config`] object from source and output directory parameters.
     pub fn from_directory(dir: &Path, output_directory: &Path) -> Result<Config> {
         let path = dir.join("futhorc.yaml");
         if path.exists() {
@@ -120,6 +188,8 @@ impl Config {
         }
     }
 
+    /// Loads a [`Config`] object from project file path and output directory
+    /// path parameters.
     pub fn from_project_file(path: &Path, output_directory: &Path) -> Result<Config> {
         let project: Project =
             serde_yaml::from_reader(File::open(path).map_err(|e| Error::OpenProjectFile {
