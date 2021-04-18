@@ -125,12 +125,12 @@ impl<'a> HtmlRenderer {
 
     fn on_start<W: StrWrite>(&mut self, w: &mut W, tag: Tag<'a>) -> io::Result<()> {
         match tag {
-            Tag::BlockQuote => write!(w, "{}", "<blockquote>"),
+            Tag::BlockQuote => write!(w, "<blockquote>"),
             Tag::CodeBlock(kind) => match kind {
-                CodeBlockKind::Fenced(info) => match info.split(" ").next() {
+                CodeBlockKind::Fenced(info) => match info.split(' ').next() {
                     None => panic!("There must be at least one result from split()"),
                     Some(lang) => match lang.is_empty() {
-                        true => write!(w, "{}", "<pre><code>"),
+                        true => write!(w, "<pre><code>"),
                         false => write!(w, r#"<pre><code class="language-{}">"#, lang),
                     },
                 },
@@ -169,7 +169,7 @@ impl<'a> HtmlRenderer {
             Tag::List(None) => w.write_str("<ul>"),
             Tag::List(Some(1)) => w.write_str("<ol>"),
             Tag::List(Some(start)) => write!(w, r#"<ol start="{}">"#, start),
-            Tag::Paragraph => write!(w, "{}", "<p>"),
+            Tag::Paragraph => write!(w, "<p>"),
             Tag::Strikethrough => w.write_str("<del>"),
             Tag::Strong => w.write_str("<strong>"),
             Tag::Table(alignments) => {

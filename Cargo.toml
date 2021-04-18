@@ -1,6 +1,10 @@
 [package]
 name = "futhorc"
-version = "0.1.0"
+description = "A static site generator to learn Rust and to build my personal blog"
+license = "GPL-3.0"
+documentation = "https://docs.rs/futhorc/latest/futhorc/"
+repository = "https://github.com/weberc2/futhorc"
+version = "0.1.2"
 authors = ["Craig Weber <weberc2@gmail.com>"]
 edition = "2018"
 
@@ -15,3 +19,6 @@ gtmpl_derive = "0.4.0"
 gtmpl_value = "0.4.0"
 slug = "0.1.4"
 clap = "2.33.3"
+
+[features]
+fail-on-warnings = []

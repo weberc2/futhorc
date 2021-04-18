@@ -1,13 +1,22 @@
+//! Defines [`Url`] and [`UrlBuf`] types which are analogous to the [`str`] and
+//! [`String`] or [`std::path::Path`] and [`std::path::PathBuf`] pairs. These are
+//! effectively newtypes for [`str`] and [`String`].
+
 use serde::{Deserialize, Deserializer};
 use std::ops::Deref;
 
+/// A newtype for URL strings, analogous to [`str`].
 pub struct Url(str);
 
 impl Url {
+    /// Construct a new `&Url` from any [`AsRef<str>`].
+    #[inline]
     pub fn new<S: AsRef<str> + ?Sized>(url: &S) -> &Url {
         unsafe { &*(url.as_ref().trim_end_matches('/') as *const str as *const Url) }
     }
 
+    /// Join any [`AsRef<str>`] to the `&Url`.
+    #[inline]
     pub fn join<S: AsRef<str>>(&self, rhs: S) -> UrlBuf {
         let mut buf = self.to_url_buf();
         buf.0.push('/');
@@ -15,10 +24,13 @@ impl Url {
         buf
     }
 
+    /// Create a [`UrlBuf`] from the current `&Url`.
+    #[inline]
     pub fn to_url_buf(&self) -> UrlBuf {
         UrlBuf::from(self.0.to_string())
     }
 
+    /// Return the [`str`] representation of the current `&Url`.
     #[inline]
     pub fn as_str(&self) -> &str {
         &self.0
@@ -27,6 +39,8 @@ impl Url {
 
 impl ToOwned for Url {
     type Owned = UrlBuf;
+    /// Returns the owned [`UrlBuf`] corresponding to the current `&Url`.
+    #[inline]
     fn to_owned(&self) -> UrlBuf {
         UrlBuf(self.0.to_owned())
     }
@@ -51,26 +65,35 @@ impl std::fmt::Display for Url {
     }
 }
 
+/// A newtype for URL strings, analogous to [`String`].
 #[derive(Clone, Debug)]
 pub struct UrlBuf(String);
 
 impl UrlBuf {
+    /// Constructs a new [`UrlBuf`]; corresponds to [`String::new`].
+    #[inline]
     pub fn new() -> UrlBuf {
         UrlBuf(String::new())
     }
 
+    /// Consumes the current [`UrlBuf`] and returns the [`String`]
+    /// representation.
+    #[inline]
     pub fn into_string(self) -> String {
         self.0
     }
 }
 
 impl Default for UrlBuf {
+    /// Returns a default [`UrlBuf`]. This corresponds to [`String::default`].
+    #[inline]
     fn default() -> UrlBuf {
         UrlBuf(String::default())
     }
 }
 
 impl std::fmt::Display for UrlBuf {
+    #[inline]
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let url: &Url = self;
         url.fmt(f)
@@ -78,6 +101,7 @@ impl std::fmt::Display for UrlBuf {
 }
 
 impl From<UrlBuf> for String {
+    #[inline]
     fn from(url_buf: UrlBuf) -> String {
         url_buf.0
     }

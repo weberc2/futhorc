@@ -1,5 +1,5 @@
-//! The `post` module defines the [`Post`], [`Parser`], and [`Error`] types. It
-//! defines the logic for parsing posts from the file system into memory. See the
+//! Defines the [`Post`], [`Parser`], and [`Error`] types. Also defines the logic
+//! for parsing posts from the file system into memory. See the
 //! [`Post::to_value`] and [`Post::summarize`] for details on how posts are
 //! converted into template values.
 
@@ -152,8 +152,8 @@ impl<'a> Parser<'a> {
             .tags
             .iter()
             .map(|t| Tag {
-                tag: t.tag.clone(),
-                url: self.index_url.join(&t.tag).join("index.html"),
+                name: t.name.clone(),
+                url: self.index_url.join(&t.name).join("index.html"),
             })
             .collect();
         let mut options = Options::empty();

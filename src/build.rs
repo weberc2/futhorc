@@ -131,7 +131,7 @@ fn copy_dir(src: &Path, dst: &Path) -> Result<()> {
 
 // Loads the template file contents, appends them to `base_template`, and
 // parses the result into a template.
-fn parse_template<'a, P: AsRef<Path>>(template_files: impl Iterator<Item = P>) -> Result<Template> {
+fn parse_template<P: AsRef<Path>>(template_files: impl Iterator<Item = P>) -> Result<Template> {
     let mut contents = String::new();
     for template_file in template_files {
         use std::fs::File;
