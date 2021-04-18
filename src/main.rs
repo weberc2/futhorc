@@ -34,6 +34,14 @@ fn main() -> Result<(), Error> {
                         .value_name("OUTPUT_DIRECTORY")
                         .help("The target directory for the output HTML files")
                         .default_value(DEFAULT_OUTPUT_DIRECTORY),
+                )
+                .arg(
+                    Arg::with_name("PROFILE")
+                        .long("profile")
+                        .takes_value(true)
+                        .required(false)
+                        .value_name("PROFILE")
+                        .help("The project profile to use for the build"),
                 ),
         )
         .get_matches();
@@ -56,7 +64,8 @@ fn main() -> Result<(), Error> {
             _ => PathBuf::from(output),
         };
 
-        let config = Config::from_directory(project, &output).map_err(Error::Config);
+        let config = Config::from_directory(project, &output, matches.value_of("PROFILE"))
+            .map_err(Error::Config);
         return build_site(&config?).map_err(Error::Build);
     }
     Err(Error::MissingSubcommand)

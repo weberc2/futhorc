@@ -1,3 +1,9 @@
 ---
-site_root: "http://localhost:8000"
-home_page: "pages/index.html"
+profiles:
+  - name: dev
+    site_root: "http://localhost:8000"
+    home_page: "index.html"
+  - name: release
+    site_root: "https://weberc2.github.io"
+    home_page: "index.html"
+default: "dev"

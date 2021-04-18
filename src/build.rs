@@ -15,19 +15,6 @@ use std::path::{Path, PathBuf};
 /// heavy-lifting. This function also copies the static assets from source
 /// directory to the output directory.
 pub fn build_site(config: &Config) -> Result<()> {
-    fn rmdir(dir: &Path) -> Result<()> {
-        match std::fs::remove_dir_all(dir) {
-            Ok(x) => Ok(x),
-            Err(e) => match e.kind() {
-                std::io::ErrorKind::NotFound => Ok(()),
-                _ => Err(Error::Clean {
-                    path: dir.to_owned(),
-                    err: e,
-                }),
-            },
-        }
-    }
-
     let post_parser = PostParser::new(
         &config.index_url,
         &config.posts_url,
@@ -41,9 +28,16 @@ pub fn build_site(config: &Config) -> Result<()> {
     let index_template = parse_template(config.index_template.iter())?;
     let posts_template = parse_template(config.posts_template.iter())?;
 
-    // Blow away the old output directories (if they exists) so we don't have any collisions
-    rmdir(&config.index_output_directory)?;
+    // Blow away the old output directories so we don't have any collisions. We
+    // probably don't want to naively delete the whole root output directory in
+    // case the user accidentally passes the wrong directory. In the future, we
+    // could refuse to build in a directory that already exists unless it was
+    // created by `futhorc`, in which case we would then delete and rebuild that
+    // directory. In order to tell that the output directory was created by
+    // futhorc, we could leave a `.futhorc` watermark file, possibly with the
+    // identifier of the specific futhorc project.
     rmdir(&config.posts_output_directory)?;
+    rmdir(&config.index_output_directory)?;
     rmdir(&config.static_output_directory)?;
 
     let writer = Writer {
@@ -61,7 +55,15 @@ pub fn build_site(config: &Config) -> Result<()> {
     copy_dir(
         &config.static_source_directory,
         &config.static_output_directory,
-    )
+    )?;
+
+    // copy /pages/index.html to /index.html
+    let _ = std::fs::copy(
+        &config.index_output_directory.join("index.html"),
+        &config.root_output_directory.join("index.html"),
+    )?;
+
+    Ok(())
 }
 
 fn copy_dir(src: &Path, dst: &Path) -> Result<()> {
@@ -178,5 +180,18 @@ impl From<WriteError> for Error {
     /// operator.
     fn from(err: WriteError) -> Error {
         Error::Write(err)
+    }
+}
+
+fn rmdir(dir: &Path) -> Result<()> {
+    match std::fs::remove_dir_all(dir) {
+        Ok(x) => Ok(x),
+        Err(e) => match e.kind() {
+            std::io::ErrorKind::NotFound => Ok(()),
+            _ => Err(Error::Clean {
+                path: dir.to_owned(),
+                err: e,
+            }),
+        },
     }
 }
