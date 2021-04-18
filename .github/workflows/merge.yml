@@ -71,12 +71,11 @@ jobs:
       run: cargo build --verbose --features fail-on-warnings --release
     - name: Bump version
       run: |
-        cargo install cargo-bump
-        cargo bump patch
+        cargo install cargo-bump --verbose
+        echo "Bumping patch version"
+        cargo bump patch --git-tag
         version="v$(cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "futhorc") | .version')""
-        git commit -m "Bumped version to $version"
-        git tag "$version"
-        git push --atomic origin master "$version"
+        git push --tags
         mv target/release/futhorc futhorc-amd64-linux-$version
     - name: Pre-release
       uses: "marvinpinto/action-automatic-releases@latest"
