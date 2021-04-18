@@ -54,7 +54,8 @@ jobs:
     - name: Run tests
       run: cargo test --verbose --features fail-on-warnings
 
-  build:
+  release:
+    needs: [test, docs, check]
 
     runs-on: ubuntu-latest
 
@@ -66,6 +67,7 @@ jobs:
         toolchain: nightly
         override: true
         components: rustfmt, clippy
+    - name: build
       run: cargo build --verbose --features fail-on-warnings --release
     - name: Bump version
       run: |
