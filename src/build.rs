@@ -1,7 +1,8 @@
 //! Exports the [`build_site`] function which stitches together the high-level
 //! steps of building the output static site: parsing the posts
-//! ([`crate::post`]), rendering index and post pages ([`crate::write`]), and
-//! copying the static source directory into the static output directory.
+//! ([`crate::post`]), rendering index and post pages ([`crate::write`]), copying
+//! the static source directory into the static output directory, and generating
+//! the Atom feed.
 
 use crate::config::Config;
 use crate::feed::{Error as FeedError, *};
@@ -13,9 +14,9 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 
 /// Builds the site from a [`Config`] object. This calls into
-/// [`PostParser::parse_posts`] and [`Writer::write_posts`] which do the
-/// heavy-lifting. This function also copies the static assets from source
-/// directory to the output directory.
+/// [`PostParser::parse_posts`], [`Writer::write_posts`], and
+/// [`feed::write_feed`] which do the heavy-lifting. This function also copies
+/// the static assets from source directory to the output directory.
 pub fn build_site(config: Config) -> Result<()> {
     let post_parser = PostParser::new(
         &config.index_url,
@@ -42,6 +43,7 @@ pub fn build_site(config: Config) -> Result<()> {
     rmdir(&config.index_output_directory)?;
     rmdir(&config.static_output_directory)?;
 
+    // write the post and index pages
     let writer = Writer {
         posts_template: &posts_template,
         index_template: &index_template,
@@ -66,6 +68,7 @@ pub fn build_site(config: Config) -> Result<()> {
         &config.root_output_directory.join("index.html"),
     )?;
 
+    // create the atom feed
     write_feed(
         FeedConfig {
             title: config.title,
