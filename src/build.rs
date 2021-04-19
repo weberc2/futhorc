@@ -15,7 +15,7 @@ use std::path::{Path, PathBuf};
 
 /// Builds the site from a [`Config`] object. This calls into
 /// [`PostParser::parse_posts`], [`Writer::write_posts`], and
-/// [`feed::write_feed`] which do the heavy-lifting. This function also copies
+/// [`write_feed`] which do the heavy-lifting. This function also copies
 /// the static assets from source directory to the output directory.
 pub fn build_site(config: Config) -> Result<()> {
     let post_parser = PostParser::new(
