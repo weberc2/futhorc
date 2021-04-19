@@ -64,9 +64,11 @@ fn main() -> Result<(), Error> {
             _ => PathBuf::from(output),
         };
 
-        let config = Config::from_directory(project, &output, matches.value_of("PROFILE"))
-            .map_err(Error::Config);
-        return build_site(&config?).map_err(Error::Build);
+        return build_site(
+            Config::from_directory(project, &output, matches.value_of("PROFILE"))
+                .map_err(Error::Config)?,
+        )
+        .map_err(Error::Build);
     }
     Err(Error::MissingSubcommand)
 }

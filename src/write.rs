@@ -41,6 +41,11 @@ pub struct Writer<'a> {
     /// The URL for the static assets. This is made available to both post and
     /// index templates, typically for the theme's stylesheet.
     pub static_url: &'a Url,
+
+    /// The URL for the atom feed. This is made available to both post and index
+    /// templates, although typically it is only used by the index templates to
+    /// link to the atom feed.
+    pub atom_url: &'a Url,
 }
 
 impl Writer<'_> {
@@ -55,6 +60,10 @@ impl Writer<'_> {
             obj.insert(
                 "static_url".to_owned(),
                 Value::String(self.static_url.to_string()),
+            );
+            obj.insert(
+                "atom_url".to_owned(),
+                Value::String(self.atom_url.to_string()),
             );
         }
         page.template.execute(

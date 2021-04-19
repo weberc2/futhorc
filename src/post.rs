@@ -66,6 +66,16 @@ impl Post {
         Value::Object(m)
     }
 
+    /// Returns the full post body unless a `<!-- more -->` tag was found, in
+    /// which case it returns the text up to that tag (the "summary" text). It
+    /// also returns a boolean value indicating whether or not the tag was found.
+    pub fn summary(&self) -> (&str, bool) {
+        match self.body.find("<!-- more -->") {
+            None => (self.body.as_str(), false),
+            Some(idx) => (&self.body[..idx], true),
+        }
+    }
+
     /// Converts a [`Post`] into a template-renderable [`Value`] representing a
     /// post summary. The resulting [`Value`] has fields:
     ///
@@ -79,10 +89,7 @@ impl Post {
     /// * `tags`: A list of tags associated with the post
     pub fn summarize(&self) -> Value {
         use std::collections::HashMap;
-        let (summary, summarized) = match self.body.find("<!-- more -->") {
-            None => (self.body.as_str(), false),
-            Some(idx) => (&self.body[..idx], true),
-        };
+        let (summary, summarized) = self.summary();
 
         let mut m = HashMap::new();
         m.insert("url".to_owned(), Value::String(self.url.to_string()));

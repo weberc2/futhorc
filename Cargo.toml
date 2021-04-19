@@ -19,6 +19,8 @@ gtmpl_derive = "0.4.0"
 gtmpl_value = "0.4.0"
 slug = "0.1.4"
 clap = "2.33.3"
+atom_syndication = "0.9.1"
+chrono = "0.4.19"
 
 [features]
 fail-on-warnings = []
