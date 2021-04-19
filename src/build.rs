@@ -4,17 +4,19 @@
 //! copying the static source directory into the static output directory.
 
 use crate::config::Config;
+use crate::feed::{Error as FeedError, *};
 use crate::post::{Error as ParseError, Parser as PostParser};
 use crate::write::{Error as WriteError, *};
 use gtmpl::Template;
 use std::fmt;
+use std::fs::File;
 use std::path::{Path, PathBuf};
 
 /// Builds the site from a [`Config`] object. This calls into
 /// [`PostParser::parse_posts`] and [`Writer::write_posts`] which do the
 /// heavy-lifting. This function also copies the static assets from source
 /// directory to the output directory.
-pub fn build_site(config: &Config) -> Result<()> {
+pub fn build_site(config: Config) -> Result<()> {
     let post_parser = PostParser::new(
         &config.index_url,
         &config.posts_url,
@@ -48,6 +50,7 @@ pub fn build_site(config: &Config) -> Result<()> {
         index_output_directory: &config.index_output_directory,
         home_page: &config.home_page,
         static_url: &config.static_url,
+        atom_url: &config.atom_url,
     };
     writer.write_posts(&posts)?;
 
@@ -61,6 +64,17 @@ pub fn build_site(config: &Config) -> Result<()> {
     let _ = std::fs::copy(
         &config.index_output_directory.join("index.html"),
         &config.root_output_directory.join("index.html"),
+    )?;
+
+    write_feed(
+        FeedConfig {
+            title: config.title,
+            id: config.home_page.to_string(),
+            author: config.author,
+            home_page: config.home_page,
+        },
+        &posts,
+        File::create(config.root_output_directory.join("feed.atom"))?,
     )?;
 
     Ok(())
@@ -85,7 +99,6 @@ fn copy_dir(src: &Path, dst: &Path) -> Result<()> {
 fn parse_template<P: AsRef<Path>>(template_files: impl Iterator<Item = P>) -> Result<Template> {
     let mut contents = String::new();
     for template_file in template_files {
-        use std::fs::File;
         use std::io::Read;
         let template_file = template_file.as_ref();
         File::open(&template_file)
@@ -123,6 +136,9 @@ pub enum Error {
     /// Returned for errors parsing template files.
     ParseTemplate(String),
 
+    /// Returned for errors writing the feed.
+    Feed(FeedError),
+
     /// Returned for other I/O errors.
     Io(std::io::Error),
 }
@@ -140,6 +156,7 @@ impl fmt::Display for Error {
                 write!(f, "Opening template file '{}': {}", path.display(), err)
             }
             Error::ParseTemplate(err) => err.fmt(f),
+            Error::Feed(err) => err.fmt(f),
             Error::Io(err) => err.fmt(f),
         }
     }
@@ -154,6 +171,7 @@ impl std::error::Error for Error {
             Error::Clean { path: _, err } => Some(err),
             Error::OpenTemplateFile { path: _, err } => Some(err),
             Error::ParseTemplate(_) => None,
+            Error::Feed(err) => Some(err),
             Error::Io(err) => Some(err),
         }
     }
@@ -180,6 +198,14 @@ impl From<WriteError> for Error {
     /// operator.
     fn from(err: WriteError) -> Error {
         Error::Write(err)
+    }
+}
+
+impl From<FeedError> for Error {
+    /// Converts [`FeedError`]s into [`Error`]. This allows us to use the `?`
+    /// operator.
+    fn from(err: FeedError) -> Error {
+        Error::Feed(err)
     }
 }
 

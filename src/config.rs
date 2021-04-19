@@ -15,6 +15,16 @@ impl Default for PageSize {
     }
 }
 
+/// Represents an author.
+#[derive(Debug, Clone, Deserialize)]
+pub struct Author {
+    /// The author's name.
+    pub name: String,
+
+    /// The author's email.
+    pub email: Option<String>,
+}
+
 #[derive(Deserialize)]
 struct Profile {
     pub name: String,
@@ -22,6 +32,8 @@ struct Profile {
     pub root_directory: PathBuf,
     pub site_root: UrlBuf,
     pub home_page: UrlBuf,
+    pub author: Option<Author>,
+    pub title: String,
 
     #[serde(default)]
     pub index_page_size: PageSize,
@@ -43,6 +55,12 @@ struct Theme {
 /// [`crate::build::build_site`].
 #[derive(Debug)]
 pub struct Config {
+    /// The title of the site.
+    pub title: String,
+
+    /// The author of the site.
+    pub author: Option<Author>,
+
     /// The absolute path to the root output directory.
     pub root_output_directory: PathBuf,
 
@@ -99,6 +117,12 @@ pub struct Config {
 
     /// The absolute path to the output directory for static assets.
     pub static_output_directory: PathBuf,
+
+    /// The fully-qualified URL for the atom feed.
+    pub atom_url: UrlBuf,
+
+    /// The absolute path to the atom output file.
+    pub atom_output_path: PathBuf,
 }
 
 impl Config {
@@ -138,7 +162,7 @@ impl Config {
 
         let profile = match project
             .profiles
-            .iter()
+            .into_iter()
             .find(|p| p.name == requested_profile)
         {
             None => Err(Error::UnknownProfile(requested_profile.to_owned())),
@@ -155,6 +179,8 @@ impl Config {
                 })?;
                 let theme: Theme = serde_yaml::from_reader(theme_file)?;
                 Ok(Config {
+                    title: profile.title,
+                    author: profile.author,
                     root_output_directory: output_directory.to_owned(),
                     home_page: profile.site_root.join(&profile.home_page),
                     posts_source_directory: project_root.join("posts"),
@@ -176,6 +202,8 @@ impl Config {
                     static_source_directory: theme_dir.join("static"),
                     static_output_directory: output_directory.join("static"),
                     index_page_size: profile.index_page_size.0,
+                    atom_url: profile.site_root.join("feed.atom"),
+                    atom_output_path: output_directory.join("feed.atom"),
                 })
             }
         }
