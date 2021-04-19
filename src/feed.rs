@@ -1,3 +1,5 @@
+//! Support for creating Atom feeds from a list of posts.
+
 use crate::config::Author;
 use crate::post::Post;
 use crate::url::UrlBuf;
@@ -8,6 +10,7 @@ use chrono::{
 use std::fmt;
 use std::io::Write;
 
+/// Bundled configuration for creating a feed.
 pub struct FeedConfig {
     pub title: String,
     pub id: String,
@@ -15,6 +18,9 @@ pub struct FeedConfig {
     pub home_page: UrlBuf,
 }
 
+/// Creates a feed from some configuration ([`FeedConfig`]) and a list of
+/// [`Post`]s and writes the result to a [`std::io::Write`]. This function takes
+/// ownership of the provided [`FeedConfig`].
 pub fn write_feed<W: Write>(config: FeedConfig, posts: &[Post], w: W) -> Result<()> {
     feed(config, posts)?.write_to(w)?;
     Ok(())
@@ -107,14 +113,22 @@ fn author_to_people(author: Option<Author>) -> Vec<Person> {
 
 type Result<T> = std::result::Result<T, Error>;
 
+/// Represents a problem creating a feed. Variants inlude I/O, Atom, and
+/// date-time parsing issues.
 #[derive(Debug)]
 pub enum Error {
+    /// Returned when there is a generic I/O error.
     Io(std::io::Error),
+
+    /// Returned when there is an Atom-related error.
     Atom(AtomError),
+
+    /// Returned when there is an issue parsing a post's date.
     DateTimeParse(ParseError),
 }
 
 impl fmt::Display for Error {
+    /// Implements [`fmt::Display`] for [`Error`].
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Error::Io(err) => err.fmt(f),
@@ -125,6 +139,7 @@ impl fmt::Display for Error {
 }
 
 impl std::error::Error for Error {
+    /// Implements [`std::error::Error`] for [`Error`].
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Error::Io(err) => Some(err),
@@ -135,18 +150,24 @@ impl std::error::Error for Error {
 }
 
 impl From<std::io::Error> for Error {
+    /// Converts [`std::io::Error`]s into [`Error`]. This allows us to use the
+    /// `?` operator in fallible feed operations.
     fn from(err: std::io::Error) -> Error {
         Error::Io(err)
     }
 }
 
 impl From<AtomError> for Error {
+    /// Converts [`AtomError`]s into [`Error`]. This allows us to use the `?`
+    /// operator in fallible feed operations.
     fn from(err: AtomError) -> Error {
         Error::Atom(err)
     }
 }
 
 impl From<ParseError> for Error {
+    /// Converts [`ParseError`]s into [`Error`]. This allows us to use the `?`
+    /// operator in fallible feed operations.
     fn from(err: ParseError) -> Error {
         Error::DateTimeParse(err)
     }
