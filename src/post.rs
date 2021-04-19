@@ -69,7 +69,7 @@ impl Post {
     /// Returns the full post body unless a `<!-- more -->` tag was found, in
     /// which case it returns the text up to that tag (the "summary" text). It
     /// also returns a boolean value indicating whether or not the tag was found.
-    pub fn summary<'a>(&'a self) -> (&'a str, bool) {
+    pub fn summary(&self) -> (&str, bool) {
         match self.body.find("<!-- more -->") {
             None => (self.body.as_str(), false),
             Some(idx) => (&self.body[..idx], true),
