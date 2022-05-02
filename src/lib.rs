@@ -22,7 +22,6 @@
 //! result to disk.
 
 #![cfg_attr(feature = "fail-on-warnings", deny(warnings))]
-#![feature(map_into_keys_values)]
 
 pub mod build;
 pub mod config;

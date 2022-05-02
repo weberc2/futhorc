@@ -29,7 +29,6 @@ pub struct Author {
 struct Profile {
     pub name: String,
     #[serde(default)]
-    pub root_directory: PathBuf,
     pub site_root: UrlBuf,
     pub home_page: UrlBuf,
     pub author: Option<Author>,
