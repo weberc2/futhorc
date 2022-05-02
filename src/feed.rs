@@ -3,7 +3,7 @@
 use crate::config::Author;
 use crate::post::Post;
 use crate::url::UrlBuf;
-use atom_syndication::{Entry, Error as AtomError, Feed, Link, Person};
+use atom_syndication::{Entry, Error as AtomError, Feed, Link, Person, Text};
 use chrono::{
     FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, ParseError, ParseResult, TimeZone, Utc,
 };
@@ -27,10 +27,10 @@ pub fn write_feed<W: Write>(config: FeedConfig, posts: &[Post], w: W) -> Result<
 }
 
 fn feed(config: FeedConfig, posts: &[Post]) -> ParseResult<Feed> {
-    use std::collections::HashMap;
+    use std::collections::BTreeMap;
     Ok(Feed {
         entries: feed_entries(&config, posts)?,
-        title: config.title,
+        title: Text::plain(config.title),
         id: config.id,
         updated: FixedOffset::east(0).from_utc_datetime(&Utc::now().naive_utc()),
         authors: author_to_people(config.author),
@@ -41,8 +41,8 @@ fn feed(config: FeedConfig, posts: &[Post]) -> ParseResult<Feed> {
         logo: None,
         rights: None,
         subtitle: None,
-        extensions: HashMap::new(),
-        namespaces: HashMap::new(),
+        extensions: BTreeMap::new(),
+        namespaces: BTreeMap::new(),
         links: vec![Link {
             href: config.home_page.into_string(),
             rel: "alternate".to_string(),
@@ -51,11 +51,13 @@ fn feed(config: FeedConfig, posts: &[Post]) -> ParseResult<Feed> {
             mime_type: None,
             length: None,
         }],
+        base: None,
+        lang: None,
     })
 }
 
 fn feed_entries(config: &FeedConfig, posts: &[Post]) -> ParseResult<Vec<Entry>> {
-    use std::collections::HashMap;
+    use std::collections::BTreeMap;
     let mut entries: Vec<Entry> = Vec::with_capacity(posts.len());
 
     for post in posts {
@@ -76,7 +78,7 @@ fn feed_entries(config: &FeedConfig, posts: &[Post]) -> ParseResult<Vec<Entry>> 
 
         entries.push(Entry {
             id: post.url.to_string(),
-            title: post.title.clone(),
+            title: Text::plain(post.title.clone()),
             updated: date,
             authors: author_to_people(config.author.clone()),
             links: vec![Link {
@@ -88,13 +90,13 @@ fn feed_entries(config: &FeedConfig, posts: &[Post]) -> ParseResult<Vec<Entry>> 
                 length: None,
             }],
             rights: None,
-            summary: Some(summary.to_owned()),
+            summary: Some(Text::html(summary.to_owned())),
             categories: Vec::new(),
             contributors: Vec::new(),
             published: Some(date),
             source: None,
             content: None,
-            extensions: HashMap::new(),
+            extensions: BTreeMap::new(),
         })
     }
     Ok(entries)
