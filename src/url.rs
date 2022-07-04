@@ -1,6 +1,6 @@
 //! Defines [`Url`] and [`UrlBuf`] types which are analogous to the [`str`] and
-//! [`String`] or [`std::path::Path`] and [`std::path::PathBuf`] pairs. These are
-//! effectively newtypes for [`str`] and [`String`].
+//! [`String`] or [`std::path::Path`] and [`std::path::PathBuf`] pairs. These
+//! are effectively newtypes for [`str`] and [`String`].
 
 use gtmpl::Value;
 use serde::{Deserialize, Deserializer};
@@ -13,7 +13,9 @@ impl Url {
     /// Construct a new `&Url` from any [`AsRef<str>`].
     #[inline]
     pub fn new<S: AsRef<str> + ?Sized>(url: &S) -> &Url {
-        unsafe { &*(url.as_ref().trim_end_matches('/') as *const str as *const Url) }
+        unsafe {
+            &*(url.as_ref().trim_end_matches('/') as *const str as *const Url)
+        }
     }
 
     /// Join any [`AsRef<str>`] to the `&Url`.

@@ -12,10 +12,10 @@
 //! 3. Rendering all pages to disk
 //!
 //! Again here the second sub-step is the more involved, because we need to
-//! create groups of index pages for each tag and another group for the empty tag
-//! which corresponds to all posts. A group of index pages is referred to as an
-//! "index", and each index is paginated--converted into groups of pages based on
-//! a configurable number of posts per index page.
+//! create groups of index pages for each tag and another group for the empty
+//! tag which corresponds to all posts. A group of index pages is referred to
+//! as an "index", and each index is paginated--converted into groups of pages
+//! based on a configurable number of posts per index page.
 //!
 //! The third substep is pretty straight-forward: for each page, apply the
 //! template (either the post template or the index template) and write the

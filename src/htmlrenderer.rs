@@ -1,9 +1,9 @@
 //! Implements a custom [`push_html`] to support footnotes in summaries.
 //! [`pulldown_cmark::html::push_html`] assumes that the footnote definition is
-//! on the same page as the footnote reference, which is true for post pages, but
-//! not for the index pages (in cases where the footnote reference appears above
-//! the fold in the post summary, but the footnote definition is at the bottom of
-//! the post page).
+//! on the same page as the footnote reference, which is true for post pages,
+//! but not for the index pages (in cases where the footnote reference appears
+//! above the fold in the post summary, but the footnote definition is at the
+//! bottom of the post page).
 
 use pulldown_cmark::escape::{escape_href, escape_html, StrWrite};
 use pulldown_cmark::{Alignment, CodeBlockKind, CowStr, Event, LinkType, Tag};
@@ -84,7 +84,11 @@ struct HtmlRenderer {
 }
 
 impl<'a> HtmlRenderer {
-    fn on_event<W: StrWrite>(&mut self, w: &mut W, event: Event<'a>) -> io::Result<()> {
+    fn on_event<W: StrWrite>(
+        &mut self,
+        w: &mut W,
+        event: Event<'a>,
+    ) -> io::Result<()> {
         match event {
             Event::Start(tag) => self.on_start(w, tag),
             Event::End(tag) => self.on_end(w, tag),
@@ -100,7 +104,9 @@ impl<'a> HtmlRenderer {
             Event::Html(html) => self.on_html(w, html),
             Event::Rule => self.on_rule(w),
             Event::SoftBreak => self.on_soft_break(w),
-            Event::TaskListMarker(checked) => self.on_task_list_marker(w, checked),
+            Event::TaskListMarker(checked) => {
+                self.on_task_list_marker(w, checked)
+            }
             Event::Text(text) => self.on_text(w, text),
         }
     }
@@ -122,15 +128,25 @@ impl<'a> HtmlRenderer {
         renderer
     }
 
-    fn on_start<W: StrWrite>(&mut self, w: &mut W, tag: Tag<'a>) -> io::Result<()> {
+    fn on_start<W: StrWrite>(
+        &mut self,
+        w: &mut W,
+        tag: Tag<'a>,
+    ) -> io::Result<()> {
         match tag {
             Tag::BlockQuote => write!(w, "<blockquote>"),
             Tag::CodeBlock(kind) => match kind {
                 CodeBlockKind::Fenced(info) => match info.split(' ').next() {
-                    None => panic!("There must be at least one result from split()"),
+                    None => panic!(
+                        "There must be at least one result from split()"
+                    ),
                     Some(lang) => match lang.is_empty() {
                         true => write!(w, "<pre><code>"),
-                        false => write!(w, r#"<pre><code class="language-{}">"#, lang),
+                        false => write!(
+                            w,
+                            r#"<pre><code class="language-{}">"#,
+                            lang
+                        ),
                     },
                 },
                 CodeBlockKind::Indented => w.write_str("<pre><code>"),
@@ -208,7 +224,8 @@ impl<'a> HtmlRenderer {
             Tag::Emphasis => w.write_str("</em>"),
             Tag::FootnoteDefinition(_) => w.write_str("</div>"),
             Tag::Heading(level) => write!(w, "</h{}>", level),
-            Tag::Image(_, _, _) => Ok(()), // shouldn't happen, handled in start
+            Tag::Image(_, _, _) => Ok(()), /* shouldn't happen, handled in
+                                             * start */
             Tag::Item => w.write_str("</li>"),
             Tag::Link(_, _, _) => w.write_str("</a>"),
             Tag::List(Some(_)) => w.write_str("</ol>"),
@@ -232,15 +249,27 @@ impl<'a> HtmlRenderer {
         }
     }
 
-    fn on_text<W: StrWrite>(&mut self, w: &mut W, s: CowStr) -> io::Result<()> {
+    fn on_text<W: StrWrite>(
+        &mut self,
+        w: &mut W,
+        s: CowStr,
+    ) -> io::Result<()> {
         escape_html(w, &s)
     }
 
-    fn on_code<W: StrWrite>(&mut self, w: &mut W, s: CowStr) -> io::Result<()> {
+    fn on_code<W: StrWrite>(
+        &mut self,
+        w: &mut W,
+        s: CowStr,
+    ) -> io::Result<()> {
         write!(w, "<code>{}</code>", EscapeHtml(s))
     }
 
-    fn on_html<W: StrWrite>(&mut self, w: &mut W, s: CowStr) -> io::Result<()> {
+    fn on_html<W: StrWrite>(
+        &mut self,
+        w: &mut W,
+        s: CowStr,
+    ) -> io::Result<()> {
         w.write_str(&s)
     }
 
@@ -256,7 +285,11 @@ impl<'a> HtmlRenderer {
         w.write_str("<hr />")
     }
 
-    fn on_task_list_marker<W: StrWrite>(&mut self, w: &mut W, checked: bool) -> io::Result<()> {
+    fn on_task_list_marker<W: StrWrite>(
+        &mut self,
+        w: &mut W,
+        checked: bool,
+    ) -> io::Result<()> {
         write!(
             w,
             r#"<input disabled="" type="checkbox" {}/>"#,
@@ -271,7 +304,11 @@ impl<'a> HtmlRenderer {
 /// Converts [`Event`]s into an HTML string much like
 /// `pulldown_cmark::html::push_html` except that this also supports footnote
 /// prefixes. See the module description for more details.
-pub fn push_html<'a, I>(out: &mut String, events: I, footnote_prefix: &str) -> io::Result<()>
+pub fn push_html<'a, I>(
+    out: &mut String,
+    events: I,
+    footnote_prefix: &str,
+) -> io::Result<()>
 where
     I: Iterator<Item = Event<'a>>,
 {

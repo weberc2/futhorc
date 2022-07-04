@@ -63,28 +63,29 @@ pub struct Config {
     /// The absolute path to the root output directory.
     pub root_output_directory: PathBuf,
 
-    /// The absolute path to the directory in which the post source files (`.md`)
-    /// are located.
+    /// The absolute path to the directory in which the post source files
+    /// (`.md`) are located.
     pub posts_source_directory: PathBuf,
 
     /// The fully-qualified URL to the site's home page. This comes from the
-    /// `futhorc.yaml` project file and is intended to be provided to the index
-    /// and post templates, e.g., to create a site-header link.
+    /// `futhorc.yaml` project file and is intended to be provided to the
+    /// index and post templates, e.g., to create a site-header link.
     pub home_page: UrlBuf,
 
     /// The fully-qualified base URL for the index pages. The main index pages
-    /// will live at `{index_url}/index.html`, `{index_url}/1.html`, etc. The tag
-    /// index pages will live at `{index_url}/{tag_name}/index.html`,
+    /// will live at `{index_url}/index.html`, `{index_url}/1.html`, etc. The
+    /// tag index pages will live at `{index_url}/{tag_name}/index.html`,
     /// `{index_url}/{tag_name}/1.html`, etc.
     pub index_url: UrlBuf,
 
-    /// The paths to index template files which will be concatenated and the result
-    /// parsed into a [`gtmpl::Template`] object.
+    /// The paths to index template files which will be concatenated and the
+    /// result parsed into a [`gtmpl::Template`] object.
     pub index_template: Vec<PathBuf>,
 
-    /// The absolute path to the output directory for index files. The main index
-    /// page files will live at `{index_output_directory}/index.html`,
-    /// `{index_output_directory}/1.html`, etc. The tag index page files will
+    /// The absolute path to the output directory for index files. The main
+    /// index page files will live at
+    /// `{index_output_directory}/index.html`, `{index_output_directory}/
+    /// 1.html`, etc. The tag index page files will
     /// live at `{index_output_directory}/{tag_name}/index.html`,
     /// `{index_output_directory}/{tag_name}/1.html`, etc.
     pub index_output_directory: PathBuf,
@@ -93,17 +94,17 @@ pub struct Config {
     pub index_page_size: usize,
 
     /// The fully-qualified base URL for post pages. E.g., for a post whose
-    /// source file is located at `{posts_source_directory}/foo/bar.md`, the URL
-    /// will be `{posts_url}/foo/bar.html`.
+    /// source file is located at `{posts_source_directory}/foo/bar.md`, the
+    /// URL will be `{posts_url}/foo/bar.html`.
     pub posts_url: UrlBuf,
 
-    /// The paths to post template files which will be concatenated and the result
-    /// parsed into a [`gtmpl::Template`] object.
+    /// The paths to post template files which will be concatenated and the
+    /// result parsed into a [`gtmpl::Template`] object.
     pub posts_template: Vec<PathBuf>,
 
     /// The fully-qualified base URL for post pages. E.g., for a post whose
-    /// source file is located at `{posts_source_directory}/foo/bar.md`, the URL
-    /// will be `{posts_url}/foo/bar.html`.
+    /// source file is located at `{posts_source_directory}/foo/bar.md`, the
+    /// URL will be `{posts_url}/foo/bar.html`.
     pub posts_output_directory: PathBuf,
 
     /// The fully-qualified base URL for static assets. E.g., a static asset
@@ -136,7 +137,9 @@ impl Config {
             Config::from_project_file(&path, output_directory, profile)
         } else {
             match dir.parent() {
-                Some(dir_) => Config::from_directory(dir_, output_directory, profile),
+                Some(dir_) => {
+                    Config::from_directory(dir_, output_directory, profile)
+                }
                 None => Err(Error::MissingProjectFile(dir.to_owned())),
             }
         }
@@ -150,9 +153,11 @@ impl Config {
         profile: Option<&str>,
     ) -> Result<Config> {
         let project: Project =
-            serde_yaml::from_reader(File::open(path).map_err(|e| Error::OpenProjectFile {
-                path: path.to_owned(),
-                err: e,
+            serde_yaml::from_reader(File::open(path).map_err(|e| {
+                Error::OpenProjectFile {
+                    path: path.to_owned(),
+                    err: e,
+                }
             })?)?;
         let requested_profile = match profile {
             Some(profile) => profile,
@@ -172,9 +177,11 @@ impl Config {
             Some(project_root) => {
                 let theme_dir = project_root.join("theme");
                 let theme_path = theme_dir.join("theme.yaml");
-                let theme_file = File::open(&theme_path).map_err(|e| Error::OpenThemeFile {
-                    path: theme_path,
-                    err: e,
+                let theme_file = File::open(&theme_path).map_err(|e| {
+                    Error::OpenThemeFile {
+                        path: theme_path,
+                        err: e,
+                    }
                 })?;
                 let theme: Theme = serde_yaml::from_reader(theme_file)?;
                 Ok(Config {
@@ -226,8 +233,8 @@ pub enum Error {
     /// Returned when the configuration files are malformed.
     DeserializeYaml(serde_yaml::Error),
 
-    /// Returned when the requested profile doesn't exist in the `futhorc.yaml`
-    /// project file.
+    /// Returned when the requested profile doesn't exist in the
+    /// `futhorc.yaml` project file.
     UnknownProfile(String),
 
     /// Returned when there is a problem opening a theme file.
@@ -289,8 +296,8 @@ impl std::error::Error for Error {
 }
 
 impl From<serde_yaml::Error> for Error {
-    /// Converts [`serde_yaml::Error`] into [`Error`]. This allows us to use the
-    /// `?` operator on fallible config parsing operations.
+    /// Converts [`serde_yaml::Error`] into [`Error`]. This allows us to use
+    /// the `?` operator on fallible config parsing operations.
     fn from(err: serde_yaml::Error) -> Error {
         Error::DeserializeYaml(err)
     }
