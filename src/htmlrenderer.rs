@@ -225,7 +225,7 @@ impl<'a> HtmlRenderer {
             Tag::FootnoteDefinition(_) => w.write_str("</div>"),
             Tag::Heading(level) => write!(w, "</h{}>", level),
             Tag::Image(_, _, _) => Ok(()), /* shouldn't happen, handled in
-                                             * start */
+            * start */
             Tag::Item => w.write_str("</li>"),
             Tag::Link(_, _, _) => w.write_str("</a>"),
             Tag::List(Some(_)) => w.write_str("</ol>"),

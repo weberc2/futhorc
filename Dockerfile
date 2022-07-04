@@ -1,4 +1,4 @@
-FROM rustlang/rust:nightly
+FROM rustlang/rust:stable
 
 WORKDIR /workspace
 
