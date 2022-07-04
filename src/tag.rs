@@ -5,9 +5,10 @@ use gtmpl::Value;
 use serde::de::{Deserialize, Deserializer};
 use std::hash::{Hash, Hasher};
 
-/// Represents a [`crate::post::Post`] tag. On parsing a post from YAML, only the
-/// `name` field is parsed while the `url` field is left empty. The URL field
-/// must be filled in later based on the `index_base_url` and the tag name.
+/// Represents a [`crate::post::Post`] tag. On parsing a post from YAML, only
+/// the `name` field is parsed while the `url` field is left empty. The URL
+/// field must be filled in later based on the `index_base_url` and the tag
+/// name.
 #[derive(Clone, Debug)]
 pub struct Tag {
     /// The tag's name. This should be slugified so e.g., `macOS` and `MacOS`
@@ -15,15 +16,16 @@ pub struct Tag {
     /// [`crate::url::UrlBuf`].
     pub name: String,
 
-    /// The URL for the tag's first index page. Given an `index_base_url`, this
-    /// should look something like `{index_base_url}/{tag_name}/index.html`.
+    /// The URL for the tag's first index page. Given an `index_base_url`,
+    /// this should look something like
+    /// `{index_base_url}/{tag_name}/index.html`.
     pub url: UrlBuf,
 }
 
 impl<'de> Deserialize<'de> for Tag {
-    /// Implements [`serde::de::Deserialize`] for [`Tag`]. This expects a string
-    /// and will deserialize it into a [`Tag`] whose `name` is the sluggified
-    /// input string and whose `url` field is left empty.
+    /// Implements [`serde::de::Deserialize`] for [`Tag`]. This expects a
+    /// string and will deserialize it into a [`Tag`] whose `name` is the
+    /// sluggified input string and whose `url` field is left empty.
     fn deserialize<D>(deserializer: D) -> std::result::Result<Tag, D::Error>
     where
         D: Deserializer<'de>,
@@ -44,8 +46,8 @@ impl Hash for Tag {
 }
 
 impl PartialEq for Tag {
-    /// Implements [`PartialEq`] and [`Eq`] for [`Tag`] by delegating directly to
-    /// the `name` field.
+    /// Implements [`PartialEq`] and [`Eq`] for [`Tag`] by delegating directly
+    /// to the `name` field.
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name
     }

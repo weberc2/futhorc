@@ -19,32 +19,34 @@ pub struct Writer<'a> {
 
     /// The base URL for index pages. The main index pages will be located at
     /// `{index_base_url}/index.html`, `{index_base_url/1.html}`, etc. The tag
-    /// index pages will be located at `{index_base_url}/{tag_name}/index.html`,
-    /// `{index_base_url}/{tag_name}/1.html`, etc.
+    /// index pages will be located at
+    /// `{index_base_url}/{tag_name}/index.html`, `{index_base_url}/
+    /// {tag_name}/1.html`, etc.
     pub index_base_url: &'a Url,
 
     /// The directory in which the index HTML files will be written. The main
     /// index page files will be located at
-    /// `{index_output_directory}/index.html`, `{index_output_directory}/1.html`,
-    /// etc. The tag index page files will be located at
-    /// `{index_output_directory}/{tag_name}/index.html`,
-    /// `{index_output_directory}/{tag_name}/1.html`,
+    /// `{index_output_directory}/index.html`,
+    /// `{index_output_directory}/1.html`, etc. The tag index page files
+    /// will be located at `{index_output_directory}/{tag_name}/index.
+    /// html`, `{index_output_directory}/{tag_name}/1.html`,
     pub index_output_directory: &'a Path,
 
     /// The number of posts per index page.
     pub index_page_size: usize,
 
-    /// The URL for the site's home page. This is made available to both post and
-    /// index templates, typically as the destination for the site-header link.
+    /// The URL for the site's home page. This is made available to both post
+    /// and index templates, typically as the destination for the
+    /// site-header link.
     pub home_page: &'a Url,
 
     /// The URL for the static assets. This is made available to both post and
     /// index templates, typically for the theme's stylesheet.
     pub static_url: &'a Url,
 
-    /// The URL for the atom feed. This is made available to both post and index
-    /// templates, although typically it is only used by the index templates to
-    /// link to the atom feed.
+    /// The URL for the atom feed. This is made available to both post and
+    /// index templates, although typically it is only used by the index
+    /// templates to link to the atom feed.
     pub atom_url: &'a Url,
 }
 
@@ -96,8 +98,8 @@ impl Writer<'_> {
     }
 }
 
-/// An object representing an output HTML file. A [`Page`] can be converted to a
-/// [`Value`] and thus rendered in a template via [`Page::to_value`].
+/// An object representing an output HTML file. A [`Page`] can be converted to
+/// a [`Value`] and thus rendered in a template via [`Page::to_value`].
 struct Page<'a> {
     /// The main item for the page.
     item: Value,
@@ -136,7 +138,8 @@ impl Page<'_> {
 
 /// Creates all of the index and post [`Page`]s for a set of `[Post]`s. See
 /// `[Writer]` for a description of arguments. Calls [`index_pages`] and
-/// [`post_pages`] and returns the union of their results as a single stream of [`Page`]s.
+/// [`post_pages`] and returns the union of their results as a single stream of
+/// [`Page`]s.
 fn pages<'a>(
     posts: &'a [Post],
     index_base_url: &Url,
@@ -155,9 +158,12 @@ fn pages<'a>(
     .chain(post_pages(posts, posts_template))
 }
 
-/// Creates all of the post [`Page`]s for a set of [`Post`]s. Takes the posts and
-/// the post template as arguments.
-fn post_pages<'a>(posts: &'a [Post], template: &'a Template) -> impl Iterator<Item = Page<'a>> {
+/// Creates all of the post [`Page`]s for a set of [`Post`]s. Takes the posts
+/// and the post template as arguments.
+fn post_pages<'a>(
+    posts: &'a [Post],
+    template: &'a Template,
+) -> impl Iterator<Item = Page<'a>> {
     posts.iter().enumerate().map(move |(i, post)| Page {
         item: post.to_value(),
         file_path: post.file_path.clone(),
@@ -204,9 +210,13 @@ struct Index<'a> {
 
 impl<'a, 't> Index<'a> {
     /// Converts the index to a list of index pages. `index_page_size` and
-    /// `index_template` represent the number of posts per page and the template
-    /// to apply to the pages respectively.
-    fn to_pages(&self, index_page_size: usize, index_template: &'t Template) -> Vec<Page<'t>> {
+    /// `index_template` represent the number of posts per page and the
+    /// template to apply to the pages respectively.
+    fn to_pages(
+        &self,
+        index_page_size: usize,
+        index_template: &'t Template,
+    ) -> Vec<Page<'t>> {
         let total_pages = match self.posts.len() % index_page_size {
             0 => self.posts.len() / index_page_size,
             _ => self.posts.len() / index_page_size + 1,
@@ -222,7 +232,9 @@ impl<'a, 't> Index<'a> {
                 };
 
                 Page {
-                    item: Value::Array(chunk.iter().map(|p| p.summarize()).collect()),
+                    item: Value::Array(
+                        chunk.iter().map(|p| p.summarize()).collect(),
+                    ),
                     file_path: self.output_directory.join(&file_name),
                     prev: match i {
                         0 => None,
@@ -244,12 +256,16 @@ impl<'a, 't> Index<'a> {
 ///
 /// Arguments:
 ///
-/// * `base_url` is the base URL for index pages. See [`Writer::index_base_url`]
-///   for more details.
+/// * `base_url` is the base URL for index pages. See
+///   [`Writer::index_base_url`] for more details.
 /// * `base_directory` is the base directory for index pages. See
 ///   [`Writer::index_output_directory`] for more details.
 /// * `posts` is the collection of [`Post`] objects to index.
-fn index_posts<'a>(base_url: &Url, base_directory: &Path, posts: &'a [Post]) -> Vec<Index<'a>> {
+fn index_posts<'a>(
+    base_url: &Url,
+    base_directory: &Path,
+    posts: &'a [Post],
+) -> Vec<Index<'a>> {
     use std::collections::HashMap;
 
     let mut indices: HashMap<String, Index> = HashMap::new();

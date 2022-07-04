@@ -5,7 +5,8 @@ use crate::post::Post;
 use crate::url::UrlBuf;
 use atom_syndication::{Entry, Error as AtomError, Feed, Link, Person, Text};
 use chrono::{
-    FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, ParseError, ParseResult, TimeZone, Utc,
+    FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, ParseError, ParseResult,
+    TimeZone, Utc,
 };
 use std::fmt;
 use std::io::Write;
@@ -19,9 +20,13 @@ pub struct FeedConfig {
 }
 
 /// Creates a feed from some configuration ([`FeedConfig`]) and a list of
-/// [`Post`]s and writes the result to a [`std::io::Write`]. This function takes
-/// ownership of the provided [`FeedConfig`].
-pub fn write_feed<W: Write>(config: FeedConfig, posts: &[Post], w: W) -> Result<()> {
+/// [`Post`]s and writes the result to a [`std::io::Write`]. This function
+/// takes ownership of the provided [`FeedConfig`].
+pub fn write_feed<W: Write>(
+    config: FeedConfig,
+    posts: &[Post],
+    w: W,
+) -> Result<()> {
     feed(config, posts)?.write_to(w)?;
     Ok(())
 }
@@ -32,7 +37,8 @@ fn feed(config: FeedConfig, posts: &[Post]) -> ParseResult<Feed> {
         entries: feed_entries(&config, posts)?,
         title: Text::plain(config.title),
         id: config.id,
-        updated: FixedOffset::east(0).from_utc_datetime(&Utc::now().naive_utc()),
+        updated: FixedOffset::east(0)
+            .from_utc_datetime(&Utc::now().naive_utc()),
         authors: author_to_people(config.author),
         categories: Vec::new(),
         contributors: Vec::new(),
@@ -56,7 +62,10 @@ fn feed(config: FeedConfig, posts: &[Post]) -> ParseResult<Feed> {
     })
 }
 
-fn feed_entries(config: &FeedConfig, posts: &[Post]) -> ParseResult<Vec<Entry>> {
+fn feed_entries(
+    config: &FeedConfig,
+    posts: &[Post],
+) -> ParseResult<Vec<Entry>> {
     use std::collections::BTreeMap;
     let mut entries: Vec<Entry> = Vec::with_capacity(posts.len());
 
@@ -66,10 +75,10 @@ fn feed_entries(config: &FeedConfig, posts: &[Post]) -> ParseResult<Vec<Entry>> 
         // Good grief, `chrono` is ridiculous. If we try to skip this ceremony
         // and just do FixedOffset::parse_from_str(), we will get a runtime
         // error because we don't have fully-precise time information or a
-        // timezone. Below I'm intending to use the UTC timezone. I think that's
-        // what `FixedOffset::east(0)` does, but it's hard to say because chrono
-        // is so complicated and the documentation doesn't provide enough
-        // context.
+        // timezone. Below I'm intending to use the UTC timezone. I think
+        // that's what `FixedOffset::east(0)` does, but it's hard to
+        // say because chrono is so complicated and the documentation
+        // doesn't provide enough context.
         let naive_date = NaiveDate::parse_from_str(&post.date, "%Y-%m-%d")?;
         let naive_time = NaiveTime::from_hms(0, 0, 0);
         let naive_date_time = NaiveDateTime::new(naive_date, naive_time);

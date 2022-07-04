@@ -1,5 +1,5 @@
-//! Defines the [`Post`], [`Parser`], and [`Error`] types. Also defines the logic
-//! for parsing posts from the file system into memory. See the
+//! Defines the [`Post`], [`Parser`], and [`Error`] types. Also defines the
+//! logic for parsing posts from the file system into memory. See the
 //! [`Post::to_value`] and [`Post::summarize`] for details on how posts are
 //! converted into template values.
 
@@ -43,9 +43,9 @@ pub struct Post {
 }
 
 impl Post {
-    /// Converts a [`Post`] into a template-renderable [`Value`], representing a
-    /// full post (as opposed to [`Post::summarize`] which represents a post
-    /// summary). The resulting [`Value`] has fields:
+    /// Converts a [`Post`] into a template-renderable [`Value`], representing
+    /// a full post (as opposed to [`Post::summarize`] which represents a
+    /// post summary). The resulting [`Value`] has fields:
     ///
     /// * `url`: The url of the post
     /// * `title`: The title of the post
@@ -68,7 +68,8 @@ impl Post {
 
     /// Returns the full post body unless a `<!-- more -->` tag was found, in
     /// which case it returns the text up to that tag (the "summary" text). It
-    /// also returns a boolean value indicating whether or not the tag was found.
+    /// also returns a boolean value indicating whether or not the tag was
+    /// found.
     pub fn summary(&self) -> (&str, bool) {
         match self.body.find("<!-- more -->") {
             None => (self.body.as_str(), false),
@@ -83,9 +84,9 @@ impl Post {
     /// * `title`: The title of the post
     /// * `date`: The published date of the post
     /// * `summary`: The post summary if there is a `<!-- more -->` tag or else
-    ///    the full post body
-    /// * `summarized`: A boolean value representing whether or not a `<!-- more
-    ///    -->` tag was found and thus the post was truncated.
+    ///   the full post body
+    /// * `summarized`: A boolean value representing whether or not a `<!--
+    ///   more -->` tag was found and thus the post was truncated.
     /// * `tags`: A list of tags associated with the post
     pub fn summarize(&self) -> Value {
         use std::collections::HashMap;
@@ -107,22 +108,29 @@ impl Post {
 
 /// Parses [`Post`] objects from source files.
 pub struct Parser<'a> {
-    /// `index_url` is the base URL for index pages. It's used to prefix tag page
-    /// URLs (i.e., the URL for the first page of a tag is
+    /// `index_url` is the base URL for index pages. It's used to prefix tag
+    /// page URLs (i.e., the URL for the first page of a tag is
     /// `{index_url}/{tag_name}/index.html`).
     index_url: &'a Url,
 
-    /// `posts_url` is the base URL for post pages. It's used to prefix post page
-    /// URLs (i.e., the URL for a post is `{posts_url}/{post_id}.html`).
+    /// `posts_url` is the base URL for post pages. It's used to prefix post
+    /// page URLs (i.e., the URL for a post is
+    /// `{posts_url}/{post_id}.html`).
     posts_url: &'a Url,
 
-    /// `posts_directory` is the directory in which post pages will be rendered.
+    /// `posts_directory` is the directory in which post pages will be
+    /// rendered.
     posts_directory: &'a Path,
 }
 
 impl<'a> Parser<'a> {
-    /// Constructs a new parser. See fields on [`Parser`] for argument descriptions.
-    pub fn new(index_url: &'a Url, posts_url: &'a Url, posts_directory: &'a Path) -> Parser<'a> {
+    /// Constructs a new parser. See fields on [`Parser`] for argument
+    /// descriptions.
+    pub fn new(
+        index_url: &'a Url,
+        posts_url: &'a Url,
+        posts_directory: &'a Path,
+    ) -> Parser<'a> {
         Parser {
             index_url,
             posts_url,
@@ -151,7 +159,8 @@ impl<'a> Parser<'a> {
         }
 
         let (yaml_start, yaml_stop, body_start) = frontmatter_indices(input)?;
-        let mut post: Post = serde_yaml::from_str(&input[yaml_start..yaml_stop])?;
+        let mut post: Post =
+            serde_yaml::from_str(&input[yaml_start..yaml_stop])?;
         let file_name = format!("{}.html", id);
         post.url = self.posts_url.join(&file_name);
         post.file_path = self.posts_directory.join(&file_name);
@@ -169,7 +178,8 @@ impl<'a> Parser<'a> {
         options.insert(Options::ENABLE_STRIKETHROUGH);
         options.insert(Options::ENABLE_TABLES);
         options.insert(Options::ENABLE_TASKLISTS);
-        let parser = pulldown_cmark::Parser::new_ext(&input[body_start..], options);
+        let parser =
+            pulldown_cmark::Parser::new_ext(&input[body_start..], options);
 
         // The headings in the post itself need to be deprecated twice to be
         // subordinate to both the site title (h1) and the post title (h2). So
@@ -177,7 +187,9 @@ impl<'a> Parser<'a> {
         // tags and returning the tag size + 2.
         let fixed_subheading_sizes = parser.map(|ev| match ev {
             Event::Start(tag) => Event::Start(match tag {
-                pulldown_cmark::Tag::Heading(s) => pulldown_cmark::Tag::Heading(s + 2),
+                pulldown_cmark::Tag::Heading(s) => {
+                    pulldown_cmark::Tag::Heading(s + 2)
+                }
                 _ => tag,
             }),
             _ => ev,
@@ -187,9 +199,9 @@ impl<'a> Parser<'a> {
         Ok(post)
     }
 
-    /// Searches a provided `source_directory` for post files (extension = `.md`)
-    /// and returns a list of [`Post`] objects sorted by date (most recent
-    /// first). Each post file must be structured as follows:
+    /// Searches a provided `source_directory` for post files (extension =
+    /// `.md`) and returns a list of [`Post`] objects sorted by date (most
+    /// recent first). Each post file must be structured as follows:
     ///
     /// 1. Initial frontmatter fence (`---`)
     /// 2. YAML frontmatter with fields `Title`, `Date`, and optionally `Tags`
@@ -256,8 +268,12 @@ impl fmt::Display for Error {
     /// Displays an [`Error`] as human-readable text.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::FrontmatterMissingStartFence => write!(f, "Post must begin with `---`"),
-            Error::FrontmatterMissingEndFence => write!(f, "Missing clossing `---`"),
+            Error::FrontmatterMissingStartFence => {
+                write!(f, "Post must begin with `---`")
+            }
+            Error::FrontmatterMissingEndFence => {
+                write!(f, "Missing clossing `---`")
+            }
             Error::DeserializeYaml(err) => err.fmt(f),
             Error::Io(err) => err.fmt(f),
         }

@@ -65,8 +65,12 @@ fn main() -> Result<(), Error> {
         };
 
         return build_site(
-            Config::from_directory(project, &output, matches.value_of("PROFILE"))
-                .map_err(Error::Config)?,
+            Config::from_directory(
+                project,
+                &output,
+                matches.value_of("PROFILE"),
+            )
+            .map_err(Error::Config)?,
         )
         .map_err(Error::Build);
     }
@@ -85,7 +89,8 @@ enum Error {
     /// `Build` represents errors building the static site.
     Build(build::Error),
 
-    /// `Env` represents errors parsing arguments from the process's environment.
+    /// `Env` represents errors parsing arguments from the process's
+    /// environment.
     Env(std::io::Error),
 }
 
@@ -93,7 +98,9 @@ impl fmt::Display for Error {
     /// `fmt` renders the error in text form.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::MissingSubcommand => write!(f, "Missing subcommand. Try rerunning with --help"),
+            Error::MissingSubcommand => {
+                write!(f, "Missing subcommand. Try rerunning with --help")
+            }
             Error::Config(err) => err.fmt(f),
             Error::Build(err) => err.fmt(f),
             Error::Env(err) => err.fmt(f),
@@ -104,8 +111,8 @@ impl fmt::Display for Error {
 // Implement Debug by invoking Display::fmt for the error so the toplevel error
 // messages are prettier.
 impl fmt::Debug for Error {
-    /// `fmt` renders the error in text form. This just calls [`fmt::Display::fmt`] so
-    /// the toplevel errors are prettier.
+    /// `fmt` renders the error in text form. This just calls
+    /// [`fmt::Display::fmt`] so the toplevel errors are prettier.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(self, f)
     }

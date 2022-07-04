@@ -1,8 +1,8 @@
 //! Exports the [`build_site`] function which stitches together the high-level
 //! steps of building the output static site: parsing the posts
-//! ([`crate::post`]), rendering index and post pages ([`crate::write`]), copying
-//! the static source directory into the static output directory, and generating
-//! the Atom feed.
+//! ([`crate::post`]), rendering index and post pages ([`crate::write`]),
+//! copying the static source directory into the static output directory, and
+//! generating the Atom feed.
 
 use crate::config::Config;
 use crate::feed::{Error as FeedError, *};
@@ -35,10 +35,10 @@ pub fn build_site(config: Config) -> Result<()> {
     // probably don't want to naively delete the whole root output directory in
     // case the user accidentally passes the wrong directory. In the future, we
     // could refuse to build in a directory that already exists unless it was
-    // created by `futhorc`, in which case we would then delete and rebuild that
-    // directory. In order to tell that the output directory was created by
-    // futhorc, we could leave a `.futhorc` watermark file, possibly with the
-    // identifier of the specific futhorc project.
+    // created by `futhorc`, in which case we would then delete and rebuild
+    // that directory. In order to tell that the output directory was
+    // created by futhorc, we could leave a `.futhorc` watermark file,
+    // possibly with the identifier of the specific futhorc project.
     rmdir(&config.posts_output_directory)?;
     rmdir(&config.index_output_directory)?;
     rmdir(&config.static_output_directory)?;
@@ -90,7 +90,10 @@ fn copy_dir(src: &Path, dst: &Path) -> Result<()> {
         if entry.file_type()?.is_dir() {
             copy_dir(src, &dst.join(entry.file_name()))?;
         } else {
-            std::fs::copy(src.join(entry.file_name()), dst.join(entry.file_name()))?;
+            std::fs::copy(
+                src.join(entry.file_name()),
+                dst.join(entry.file_name()),
+            )?;
         }
     }
 
@@ -99,7 +102,9 @@ fn copy_dir(src: &Path, dst: &Path) -> Result<()> {
 
 // Loads the template file contents, appends them to `base_template`, and
 // parses the result into a template.
-fn parse_template<P: AsRef<Path>>(template_files: impl Iterator<Item = P>) -> Result<Template> {
+fn parse_template<P: AsRef<Path>>(
+    template_files: impl Iterator<Item = P>,
+) -> Result<Template> {
     let mut contents = String::new();
     for template_file in template_files {
         use std::io::Read;
@@ -127,7 +132,8 @@ pub enum Error {
     /// Returned for errors during parsing.
     Parse(ParseError),
 
-    /// Returned for errors writing [`crate::post::Post`]s to disk as HTML files.
+    /// Returned for errors writing [`crate::post::Post`]s to disk as HTML
+    /// files.
     Write(WriteError),
 
     /// Returned for I/O problems while cleaning output directories.
@@ -156,7 +162,12 @@ impl fmt::Display for Error {
                 write!(f, "Cleaning directory '{}': {}", path.display(), err)
             }
             Error::OpenTemplateFile { path, err } => {
-                write!(f, "Opening template file '{}': {}", path.display(), err)
+                write!(
+                    f,
+                    "Opening template file '{}': {}",
+                    path.display(),
+                    err
+                )
             }
             Error::ParseTemplate(err) => err.fmt(f),
             Error::Feed(err) => err.fmt(f),
