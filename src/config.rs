@@ -2,10 +2,10 @@
 //! configuration.
 
 use serde::Deserialize;
-use url::Url;
 use std::fmt;
 use std::fs::File;
 use std::path::{Path, PathBuf};
+use url::Url;
 
 #[derive(Deserialize)]
 struct PageSize(usize);

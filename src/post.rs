@@ -192,10 +192,11 @@ impl<'a> Parser<'a> {
                 .map(|t| {
                     Ok(Tag {
                         name: t.clone(),
-                        url: self.index_url
-                                .join(&t)?
-                                .join("index.html")
-                                .unwrap(),
+                        url: self
+                            .index_url
+                            .join(&t)?
+                            .join("index.html")
+                            .unwrap(),
                     })
                 })
                 .collect::<Result<HashSet<Tag>>>()?,

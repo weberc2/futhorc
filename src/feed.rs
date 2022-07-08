@@ -7,9 +7,9 @@ use chrono::{
     FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, ParseError, ParseResult,
     TimeZone, Utc,
 };
-use url::Url;
 use std::fmt;
 use std::io::Write;
+use url::Url;
 
 /// Bundled configuration for creating a feed.
 pub struct FeedConfig {
