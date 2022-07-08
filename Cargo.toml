@@ -21,6 +21,7 @@ slug = "0.1.4"
 clap = "2.33.3"
 atom_syndication = "0.11.0"
 chrono = "0.4.19"
+url = { version = "2.2.2", features = ["serde"] }
 
 [features]
 fail-on-warnings = []

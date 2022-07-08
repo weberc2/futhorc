@@ -1,9 +1,9 @@
 //! Defines the [`Tag`] type, which represents a [`crate::post::Post`] tag.
 
-use crate::url::*;
 use gtmpl::Value;
 use serde::de::{Deserialize, Deserializer};
 use std::hash::{Hash, Hasher};
+use url::Url;
 
 /// Represents a [`crate::post::Post`] tag. On parsing a post from YAML, only
 /// the `name` field is parsed while the `url` field is left empty. The URL
@@ -13,13 +13,13 @@ use std::hash::{Hash, Hasher};
 pub struct Tag {
     /// The tag's name. This should be slugified so e.g., `macOS` and `MacOS`
     /// resolve to the same value, and also so the field can be dropped into a
-    /// [`crate::url::UrlBuf`].
+    /// [`Url`].
     pub name: String,
 
     /// The URL for the tag's first index page. Given an `index_base_url`,
     /// this should look something like
     /// `{index_base_url}/{tag_name}/index.html`.
-    pub url: UrlBuf,
+    pub url: Option<Url>,
 }
 
 impl<'de> Deserialize<'de> for Tag {
@@ -32,7 +32,7 @@ impl<'de> Deserialize<'de> for Tag {
     {
         Ok(Tag {
             name: slug::slugify(&String::deserialize(deserializer)?),
-            url: UrlBuf::new(),
+            url: None,
         })
     }
 }
@@ -60,7 +60,13 @@ impl From<&Tag> for Value {
         use std::collections::HashMap;
         let mut m: HashMap<String, Value> = HashMap::new();
         m.insert("tag".to_owned(), (&t.name).into());
-        m.insert("url".to_owned(), (&t.url).into());
+        m.insert(
+            "url".to_owned(),
+            match &t.url {
+                Some(url) => Value::String(url.to_string()),
+                None => Value::Nil,
+            },
+        );
         Value::Object(m)
     }
 }
