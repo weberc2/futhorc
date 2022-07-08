@@ -38,6 +38,16 @@ impl Url {
     pub fn as_str(&self) -> &str {
         &self.0
     }
+
+    pub fn from_url(url: &url::Url) -> &Url {
+        Url::new(url.as_str())
+    }
+}
+
+impl From<&url::Url> for UrlBuf {
+    fn from(url: &url::Url) -> UrlBuf {
+        UrlBuf::from(url.to_string())
+    }
 }
 
 impl ToOwned for Url {

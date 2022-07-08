@@ -27,6 +27,7 @@ pub mod build;
 pub mod config;
 pub mod feed;
 pub mod htmlrenderer;
+pub mod normalize_url;
 pub mod post;
 pub mod tag;
 pub mod url;
