@@ -5,7 +5,6 @@
 
 use crate::htmlrenderer::*;
 use crate::tag::Tag;
-use crate::url::*;
 use gtmpl::Value;
 use pulldown_cmark::{self, *};
 use serde::Deserialize;
@@ -13,18 +12,10 @@ use std::collections::HashSet;
 use std::fmt;
 use std::fs::{read_dir, File};
 use std::path::{Path, PathBuf};
+use url::Url;
 
-/// Represents a blog post.
 #[derive(Deserialize, Clone)]
-pub struct Post {
-    /// The output path where the final post file will be rendered.
-    #[serde(default)]
-    pub file_path: PathBuf,
-
-    /// The address for the rendered post.
-    #[serde(default)]
-    pub url: UrlBuf,
-
+struct Frontmatter {
     /// The title of the post.
     #[serde(rename = "Title")]
     pub title: String,
@@ -33,12 +24,30 @@ pub struct Post {
     #[serde(rename = "Date")]
     pub date: String,
 
+    /// The tags associated with the post.
+    #[serde(default, rename = "Tags")]
+    pub tags: HashSet<String>,
+}
+
+/// Represents a blog post.
+#[derive(Clone)]
+pub struct Post {
+    /// The output path where the final post file will be rendered.
+    pub file_path: PathBuf,
+
+    /// The address for the rendered post.
+    pub url: Url,
+
+    /// The title of the post.
+    pub title: String,
+
+    /// The date of the post.
+    pub date: String,
+
     /// The body of the post.
-    #[serde(default)]
     pub body: String,
 
     /// The tags associated with the post.
-    #[serde(default, rename = "Tags")]
     pub tags: HashSet<Tag>,
 }
 
@@ -143,6 +152,16 @@ impl<'a> Parser<'a> {
     /// extension (e.g., the ID for a post whose source file is
     /// `{posts_source_directory}/foo/bar.md` is `foo/bar`).
     fn parse_post(&self, id: &str, input: &str) -> Result<Post> {
+        match self._parse_post(id, input) {
+            Ok(p) => Ok(p),
+            Err(e) => Err(Error::Annotated(
+                format!("parsing post `{}`", id),
+                Box::new(e),
+            )),
+        }
+    }
+
+    fn _parse_post(&self, id: &str, input: &str) -> Result<Post> {
         fn frontmatter_indices(input: &str) -> Result<(usize, usize, usize)> {
             const FENCE: &str = "---";
             if !input.starts_with(FENCE) {
@@ -159,19 +178,30 @@ impl<'a> Parser<'a> {
         }
 
         let (yaml_start, yaml_stop, body_start) = frontmatter_indices(input)?;
-        let mut post: Post =
+        let frontmatter: Frontmatter =
             serde_yaml::from_str(&input[yaml_start..yaml_stop])?;
         let file_name = format!("{}.html", id);
-        post.url = self.posts_url.join(&file_name);
-        post.file_path = self.posts_directory.join(&file_name);
-        post.tags = post
-            .tags
-            .iter()
-            .map(|t| Tag {
-                name: t.name.clone(),
-                url: self.index_url.join(&t.name).join("index.html"),
-            })
-            .collect();
+        let mut post = Post {
+            title: frontmatter.title,
+            date: frontmatter.date,
+            file_path: self.posts_directory.join(&file_name),
+            url: self.posts_url.join(&file_name)?,
+            tags: frontmatter
+                .tags
+                .iter()
+                .map(|t| {
+                    Ok(Tag {
+                        name: t.clone(),
+                        url: self
+                            .index_url
+                            .join(t)?
+                            .join("index.html")
+                            .unwrap(),
+                    })
+                })
+                .collect::<Result<HashSet<Tag>>>()?,
+            body: String::default(),
+        };
         let mut options = Options::empty();
         options.insert(Options::ENABLE_FOOTNOTES);
         options.insert(Options::ENABLE_SMART_PUNCTUATION);
@@ -260,8 +290,14 @@ pub enum Error {
     /// Returned when there was an error parsing the frontmatter as YAML.
     DeserializeYaml(serde_yaml::Error),
 
+    /// Returned when there is a problem parsing URLs.
+    UrlParse(url::ParseError),
+
     /// Returned for other I/O errors.
     Io(std::io::Error),
+
+    /// An error with an annotation.
+    Annotated(String, Box<Error>),
 }
 
 impl fmt::Display for Error {
@@ -275,7 +311,11 @@ impl fmt::Display for Error {
                 write!(f, "Missing clossing `---`")
             }
             Error::DeserializeYaml(err) => err.fmt(f),
+            Error::UrlParse(err) => err.fmt(f),
             Error::Io(err) => err.fmt(f),
+            Error::Annotated(annotation, err) => {
+                write!(f, "{}: {}", &annotation, err)
+            }
         }
     }
 }
@@ -287,8 +327,18 @@ impl std::error::Error for Error {
             Error::FrontmatterMissingStartFence => None,
             Error::FrontmatterMissingEndFence => None,
             Error::DeserializeYaml(err) => Some(err),
+            Error::UrlParse(err) => Some(err),
             Error::Io(err) => Some(err),
+            Error::Annotated(_, err) => Some(err),
         }
+    }
+}
+
+impl From<url::ParseError> for Error {
+    /// Converts a [`url::ParseError`] into an [`Error`]. It allows us to use
+    /// the `?` operator for URL parsing and joining functions.
+    fn from(err: url::ParseError) -> Error {
+        Error::UrlParse(err)
     }
 }
 

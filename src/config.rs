@@ -1,11 +1,11 @@
 //! Contains the logic for collecting and consolidating the program's
 //! configuration.
 
-use crate::url::UrlBuf;
 use serde::Deserialize;
 use std::fmt;
 use std::fs::File;
 use std::path::{Path, PathBuf};
+use url::Url;
 
 #[derive(Deserialize)]
 struct PageSize(usize);
@@ -28,9 +28,8 @@ pub struct Author {
 #[derive(Deserialize)]
 struct Profile {
     pub name: String,
-    #[serde(default)]
-    pub site_root: UrlBuf,
-    pub home_page: UrlBuf,
+    pub site_root: Url,
+    pub home_page: String,
     pub author: Option<Author>,
     pub title: String,
 
@@ -70,13 +69,13 @@ pub struct Config {
     /// The fully-qualified URL to the site's home page. This comes from the
     /// `futhorc.yaml` project file and is intended to be provided to the
     /// index and post templates, e.g., to create a site-header link.
-    pub home_page: UrlBuf,
+    pub home_page: Url,
 
     /// The fully-qualified base URL for the index pages. The main index pages
     /// will live at `{index_url}/index.html`, `{index_url}/1.html`, etc. The
     /// tag index pages will live at `{index_url}/{tag_name}/index.html`,
     /// `{index_url}/{tag_name}/1.html`, etc.
-    pub index_url: UrlBuf,
+    pub index_url: Url,
 
     /// The paths to index template files which will be concatenated and the
     /// result parsed into a [`gtmpl::Template`] object.
@@ -96,7 +95,7 @@ pub struct Config {
     /// The fully-qualified base URL for post pages. E.g., for a post whose
     /// source file is located at `{posts_source_directory}/foo/bar.md`, the
     /// URL will be `{posts_url}/foo/bar.html`.
-    pub posts_url: UrlBuf,
+    pub posts_url: Url,
 
     /// The paths to post template files which will be concatenated and the
     /// result parsed into a [`gtmpl::Template`] object.
@@ -110,7 +109,7 @@ pub struct Config {
     /// The fully-qualified base URL for static assets. E.g., a static asset
     /// whose source file is located at `{static_source_directory}/style.css`
     /// will have the URL, `{static_url}/style.css`.
-    pub static_url: UrlBuf,
+    pub static_url: Url,
 
     /// The absolute path to the source directory for static assets.
     pub static_source_directory: PathBuf,
@@ -119,7 +118,7 @@ pub struct Config {
     pub static_output_directory: PathBuf,
 
     /// The fully-qualified URL for the atom feed.
-    pub atom_url: UrlBuf,
+    pub atom_url: Url,
 
     /// The absolute path to the atom output file.
     pub atom_output_path: PathBuf,
@@ -188,10 +187,10 @@ impl Config {
                     title: profile.title,
                     author: profile.author,
                     root_output_directory: output_directory.to_owned(),
-                    home_page: profile.site_root.join(&profile.home_page),
+                    home_page: profile.site_root.join(&profile.home_page)?,
                     posts_source_directory: project_root.join("posts"),
-                    index_url: (&profile.site_root).join("pages"),
-                    posts_url: (&profile.site_root).join("posts"),
+                    index_url: (&profile.site_root).join("pages/").unwrap(),
+                    posts_url: (&profile.site_root).join("posts/").unwrap(),
                     index_template: theme
                         .index_template
                         .iter()
@@ -204,11 +203,11 @@ impl Config {
                         .collect(),
                     index_output_directory: output_directory.join("pages"),
                     posts_output_directory: output_directory.join("posts"),
-                    static_url: (&profile.site_root).join("static"),
+                    static_url: (&profile.site_root).join("static/").unwrap(),
                     static_source_directory: theme_dir.join("static"),
                     static_output_directory: output_directory.join("static"),
                     index_page_size: profile.index_page_size.0,
-                    atom_url: profile.site_root.join("feed.atom"),
+                    atom_url: profile.site_root.join("feed.atom").unwrap(),
                     atom_output_path: output_directory.join("feed.atom"),
                 })
             }
@@ -243,6 +242,9 @@ pub enum Error {
     /// Returned when there is a problem opening the project file.
     OpenProjectFile { path: PathBuf, err: std::io::Error },
 
+    /// Returned when there is a problem parsing or joining a URL.
+    UrlParse(url::ParseError),
+
     /// Returned for other I/O errors.
     Io(std::io::Error),
 }
@@ -275,6 +277,7 @@ impl fmt::Display for Error {
             Error::OpenProjectFile { path, err } => {
                 write!(f, "Opening project file '{}': {}", path.display(), err)
             }
+            Error::UrlParse(err) => err.fmt(f),
             Error::Io(err) => err.fmt(f),
         }
     }
@@ -290,8 +293,17 @@ impl std::error::Error for Error {
             Error::UnknownProfile(_) => None,
             Error::OpenThemeFile { path: _, err } => Some(err),
             Error::OpenProjectFile { path: _, err } => Some(err),
+            Error::UrlParse(err) => Some(err),
             Error::Io(err) => Some(err),
         }
+    }
+}
+
+impl From<url::ParseError> for Error {
+    /// Converts [`url::ParseError`] into [`Error`]. This allows us to use
+    /// the `?` operator on fallible config parsing operations.
+    fn from(err: url::ParseError) -> Error {
+        Error::UrlParse(err)
     }
 }
 

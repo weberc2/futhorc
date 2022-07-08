@@ -2,11 +2,11 @@
 //! into index and post HTML files on the file system.
 
 use crate::post::*;
-use crate::url::{Url, UrlBuf};
 use gtmpl::{Template, Value};
 use std::fmt;
 use std::io;
 use std::path::{Path, PathBuf};
+use url::Url;
 
 /// Responsible for indexing, templating, and writing HTML pages to disk from
 /// [`Post`] sources.
@@ -108,10 +108,10 @@ struct Page<'a> {
     file_path: PathBuf,
 
     /// The URL for the previous page, if any.
-    prev: Option<UrlBuf>,
+    prev: Option<Url>,
 
     /// The URL for the next page, if any.
-    next: Option<UrlBuf>,
+    next: Option<Url>,
 
     /// The template with which the page will be rendered.
     template: &'a Template,
@@ -123,8 +123,8 @@ impl Page<'_> {
     fn to_value(&self) -> Value {
         use std::collections::HashMap;
 
-        let option_to_value = |opt: &Option<UrlBuf>| match opt {
-            Some(url) => url.into(),
+        let option_to_value = |opt: &Option<Url>| match opt {
+            Some(url) => Value::from(url.to_string()),
             None => Value::Nil,
         };
 
@@ -199,7 +199,7 @@ fn index_pages<'a>(
 /// the empty tag, which is the main index containing all posts).
 struct Index<'a> {
     /// The base URL for all posts in the index.
-    url: UrlBuf,
+    url: Url,
 
     /// The output directory for all posts in the index.
     output_directory: PathBuf,
@@ -238,12 +238,19 @@ impl<'a, 't> Index<'a> {
                     file_path: self.output_directory.join(&file_name),
                     prev: match i {
                         0 => None,
-                        1 => Some(self.url.join("index.html")),
-                        _ => Some(self.url.join(format!("{}.html", i - 1))),
+                        // unwrap: `"index.html"` and `"<int>.html"` should
+                        // always be URL-safe.
+                        1 => Some(self.url.join("index.html").unwrap()),
+                        _ => Some(
+                            self.url.join(&format!("{}.html", i - 1)).unwrap(),
+                        ),
                     },
                     next: match i < total_pages - 1 {
                         false => None,
-                        true => Some(self.url.join(format!("{}.html", i + 1))),
+                        // unwrap: `"<int>.html"` should always be URL-safe.
+                        true => Some(
+                            self.url.join(&format!("{}.html", i + 1)).unwrap(),
+                        ),
                     },
                     template: index_template,
                 }
@@ -285,7 +292,13 @@ fn index_posts<'a>(
                     indices.insert(
                         tag.name.to_owned(),
                         Index {
-                            url: base_url.join(&tag.name).join("index.html"),
+                            // unwrap: `tag.name` and `"index.html"` should
+                            // both be guaranteed to be URL-safe.
+                            url: base_url
+                                .join(&tag.name)
+                                .unwrap()
+                                .join("index.html")
+                                .unwrap(),
                             output_directory: base_directory.join(&tag.name),
                             posts: vec![post],
                         },

@@ -29,5 +29,4 @@ pub mod feed;
 pub mod htmlrenderer;
 pub mod post;
 pub mod tag;
-pub mod url;
 pub mod write;

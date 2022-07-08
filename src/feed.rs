@@ -2,7 +2,6 @@
 
 use crate::config::Author;
 use crate::post::Post;
-use crate::url::UrlBuf;
 use atom_syndication::{Entry, Error as AtomError, Feed, Link, Person, Text};
 use chrono::{
     FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, ParseError, ParseResult,
@@ -10,13 +9,14 @@ use chrono::{
 };
 use std::fmt;
 use std::io::Write;
+use url::Url;
 
 /// Bundled configuration for creating a feed.
 pub struct FeedConfig {
     pub title: String,
     pub id: String,
     pub author: Option<Author>,
-    pub home_page: UrlBuf,
+    pub home_page: Url,
 }
 
 /// Creates a feed from some configuration ([`FeedConfig`]) and a list of
@@ -50,7 +50,7 @@ fn feed(config: FeedConfig, posts: &[Post]) -> ParseResult<Feed> {
         extensions: BTreeMap::new(),
         namespaces: BTreeMap::new(),
         links: vec![Link {
-            href: config.home_page.into_string(),
+            href: config.home_page.into(),
             rel: "alternate".to_string(),
             title: None,
             hreflang: None,
