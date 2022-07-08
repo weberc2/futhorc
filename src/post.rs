@@ -194,7 +194,7 @@ impl<'a> Parser<'a> {
                         name: t.clone(),
                         url: self
                             .index_url
-                            .join(&t)?
+                            .join(t)?
                             .join("index.html")
                             .unwrap(),
                     })
