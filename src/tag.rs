@@ -1,7 +1,6 @@
 //! Defines the [`Tag`] type, which represents a [`crate::post::Post`] tag.
 
 use gtmpl::Value;
-use serde::de::{Deserialize, Deserializer};
 use std::hash::{Hash, Hasher};
 use url::Url;
 
@@ -19,22 +18,7 @@ pub struct Tag {
     /// The URL for the tag's first index page. Given an `index_base_url`,
     /// this should look something like
     /// `{index_base_url}/{tag_name}/index.html`.
-    pub url: Option<Url>,
-}
-
-impl<'de> Deserialize<'de> for Tag {
-    /// Implements [`serde::de::Deserialize`] for [`Tag`]. This expects a
-    /// string and will deserialize it into a [`Tag`] whose `name` is the
-    /// sluggified input string and whose `url` field is left empty.
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Tag, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        Ok(Tag {
-            name: slug::slugify(&String::deserialize(deserializer)?),
-            url: None,
-        })
-    }
+    pub url: Url,
 }
 
 impl Hash for Tag {
@@ -60,13 +44,7 @@ impl From<&Tag> for Value {
         use std::collections::HashMap;
         let mut m: HashMap<String, Value> = HashMap::new();
         m.insert("tag".to_owned(), (&t.name).into());
-        m.insert(
-            "url".to_owned(),
-            match &t.url {
-                Some(url) => Value::String(url.to_string()),
-                None => Value::Nil,
-            },
-        );
+        m.insert("url".to_owned(), Value::String(t.url.to_string()));
         Value::Object(m)
     }
 }

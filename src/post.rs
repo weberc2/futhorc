@@ -26,33 +26,28 @@ struct Frontmatter {
 
     /// The tags associated with the post.
     #[serde(default, rename = "Tags")]
-    pub tags: HashSet<Tag>,
+    pub tags: HashSet<String>,
 }
 
 /// Represents a blog post.
-#[derive(Deserialize, Clone)]
+#[derive(Clone)]
 pub struct Post {
     /// The output path where the final post file will be rendered.
-    #[serde(default)]
     pub file_path: PathBuf,
 
     /// The address for the rendered post.
     pub url: Url,
 
     /// The title of the post.
-    #[serde(rename = "Title")]
     pub title: String,
 
     /// The date of the post.
-    #[serde(rename = "Date")]
     pub date: String,
 
     /// The body of the post.
-    #[serde(default)]
     pub body: String,
 
     /// The tags associated with the post.
-    #[serde(default, rename = "Tags")]
     pub tags: HashSet<Tag>,
 }
 
@@ -196,13 +191,11 @@ impl<'a> Parser<'a> {
                 .iter()
                 .map(|t| {
                     Ok(Tag {
-                        name: t.name.clone(),
-                        url: Some(
-                            self.index_url
-                                .join(&t.name)?
+                        name: t.clone(),
+                        url: self.index_url
+                                .join(&t)?
                                 .join("index.html")
                                 .unwrap(),
-                        ),
                     })
                 })
                 .collect::<Result<HashSet<Tag>>>()?,
