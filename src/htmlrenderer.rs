@@ -74,7 +74,7 @@ enum TableState {
 /// Renders markdown [`Event`]s into HTML. This is largely modeled after
 /// [`pulldown_cmark`]'s private [`HtmlWriter`
 /// struct](https://github.com/raphlinus/pulldown-cmark/blob/bf0a1a4938dbd2ec41c3add069b3d361d11731f4/src/html.rs#L36-L50).
-struct HtmlRenderer {
+pub struct HtmlRenderer {
     table_alignments: Vec<Alignment>,
     table_state: TableState,
     table_cell_index: usize,
@@ -84,7 +84,7 @@ struct HtmlRenderer {
 }
 
 impl<'a> HtmlRenderer {
-    fn on_event<W: StrWrite>(
+    pub fn on_event<W: StrWrite>(
         &mut self,
         w: &mut W,
         event: Event<'a>,
@@ -113,7 +113,7 @@ impl<'a> HtmlRenderer {
 }
 
 impl<'a> HtmlRenderer {
-    fn new() -> Self {
+    pub fn new() -> Self {
         HtmlRenderer {
             table_alignments: Vec::default(),
             table_state: TableState::Head,
@@ -304,17 +304,18 @@ impl<'a> HtmlRenderer {
 /// Converts [`Event`]s into an HTML string much like
 /// `pulldown_cmark::html::push_html` except that this also supports footnote
 /// prefixes. See the module description for more details.
-pub fn push_html<'a, I>(
+pub fn push_html<'a, I, E>(
     out: &mut String,
     events: I,
     footnote_prefix: &str,
-) -> io::Result<()>
+) -> Result<(), E>
 where
-    I: Iterator<Item = Event<'a>>,
+    E: From<io::Error>,
+    I: Iterator<Item = Result<Event<'a>, E>>,
 {
     let mut renderer = HtmlRenderer::with_footnote_prefix(footnote_prefix);
     for event in events {
-        renderer.on_event(out, event)?;
+        renderer.on_event(out, event?)?;
     }
     Ok(())
 }

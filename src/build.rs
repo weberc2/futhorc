@@ -8,6 +8,7 @@ use crate::config::Config;
 use crate::feed::{Error as FeedError, *};
 use crate::post::{Error as ParseError, Parser as PostParser};
 use crate::write::{Error as WriteError, *};
+use crate::url::{Url, UrlBuf};
 use gtmpl::Template;
 use std::fmt;
 use std::fs::File;
@@ -25,7 +26,8 @@ pub fn build_site(config: Config) -> Result<()> {
     );
 
     // collect all posts
-    let posts = post_parser.parse_posts(&config.posts_source_directory)?;
+    let (posts, static_files) =
+        post_parser.parse_posts(&config.posts_source_directory)?;
 
     // Parse the template files.
     let index_template = parse_template(config.index_template.iter())?;
@@ -48,13 +50,14 @@ pub fn build_site(config: Config) -> Result<()> {
         posts_template: &posts_template,
         index_template: &index_template,
         index_page_size: config.index_page_size,
-        index_base_url: &config.index_url,
+        index_base_url: Url::from_url(&config.index_url),
         index_output_directory: &config.index_output_directory,
-        home_page: &config.home_page,
-        static_url: &config.static_url,
-        atom_url: &config.atom_url,
+        home_page: Url::from_url(&config.home_page),
+        static_url: Url::from_url(&config.static_url),
+        atom_url: Url::from_url(&config.atom_url),
     };
     writer.write_posts(&posts)?;
+    writer.write_static_files(&static_files)?;
 
     // copy static directory
     copy_dir(
@@ -74,7 +77,7 @@ pub fn build_site(config: Config) -> Result<()> {
             title: config.title,
             id: config.home_page.to_string(),
             author: config.author,
-            home_page: config.home_page,
+            home_page: UrlBuf::from(&config.home_page),
         },
         &posts,
         File::create(config.root_output_directory.join("feed.atom"))?,
