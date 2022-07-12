@@ -9,8 +9,13 @@ pub struct Converter<'a> {
 }
 
 impl<'a> Converter<'a> {
-    /// [`posts_url`] is the URL prefix for posts. [`base`] is the relative
-    /// path from [`posts_url`] from which target URLs will be converted.
+    /// Constructs a new `Converter`
+    ///
+    /// # Arguments
+    ///
+    /// * `posts_url` - the URL prefix for posts.
+    /// * `base` - the relative path from `posts_url` from which target URLs
+    ///   will be converted.
     pub fn new(posts_root: &'a Url, base: &str) -> Result<Converter<'a>> {
         Ok(Converter {
             posts_root,

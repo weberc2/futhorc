@@ -5,14 +5,16 @@ use std::fmt;
 use std::io;
 use url::{ParseError as UrlParseError, Url};
 
-/// Converts markdown to HTML, writing the result into [`w`].
+/// Converts markdown to HTML, writing the result into `w`.
 ///
-/// * [`posts_url`] is the prefix for post URLs (e.g.,
-///   https://example.org/posts/). This should end in a trailing slash.
-/// * [`source_path`] is the relative path to the source file from the posts
+/// # Arguments
+///
+/// * `posts_url` - the prefix for post URLs (e.g.,
+///   `https://example.org/posts/`). This should end in a trailing slash.
+/// * `source_path` - the relative path to the source file from the posts
 ///   directory.
-/// * [`markdown`] is the contents of the source file.
-/// * [`footnote_prefix`] is the prefix to prepend onto footnote links.
+/// * `markdown` - the contents of the source file.
+/// * `footnote_prefix` - the prefix to prepend onto footnote links.
 pub fn to_html<W: escape::StrWrite>(
     w: &mut W,
     posts_url: &Url,
