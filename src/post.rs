@@ -194,9 +194,19 @@ impl<'a> Parser<'a> {
                         name: t.clone(),
                         url: self
                             .index_url
-                            .join(t)?
-                            .join("index.html")
-                            .unwrap(),
+                            // NOTE: tried
+                            // `index_url.join(t).join("index.html")`; however,
+                            // since `t` doesn't have a trailing slash,
+                            // [`Url::join`] was treating it as equivalent to
+                            // `index_url.join("index.html")` per the
+                            // `Url::join` docs:
+                            //
+                            // > Note: a trailing slash is significant. Without
+                            // it, the last path component is considered to be
+                            // a “file” name to be removed to get at the
+                            // “directory” that is used as the base
+                            .join(&format!("{}/index.html", t))
+                            .unwrap(), // should always succeed
                     })
                 })
                 .collect::<Result<HashSet<Tag>>>()?,
