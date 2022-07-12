@@ -112,6 +112,12 @@ impl<'a> HtmlRenderer {
     }
 }
 
+impl Default for HtmlRenderer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'a> HtmlRenderer {
     pub fn new() -> Self {
         HtmlRenderer {

@@ -214,7 +214,7 @@ impl<'a> Parser<'a> {
 
         markdown::to_html(
             &mut post.body,
-            &self.posts_url,
+            self.posts_url,
             id,
             &input[body_start..],
             post.url.as_str(),

@@ -18,7 +18,7 @@ impl<'a> Converter<'a> {
         })
     }
 
-    fn convert_absolute<'b>(&self, absolute: Url) -> Result<Url> {
+    fn convert_absolute(&self, absolute: Url) -> Result<Url> {
         if let Some(relative) = self.posts_root.make_relative(&absolute) {
             if !relative.starts_with("../")
                 && relative.ends_with(MARKDOWN_EXTENSION)
