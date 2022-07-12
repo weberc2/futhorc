@@ -3,10 +3,9 @@
 //! [`Post::to_value`] and [`Post::summarize`] for details on how posts are
 //! converted into template values.
 
-use crate::htmlrenderer::*;
+use crate::markdown;
 use crate::tag::Tag;
 use gtmpl::Value;
-use pulldown_cmark::{self, *};
 use serde::Deserialize;
 use std::collections::HashSet;
 use std::fmt;
@@ -212,30 +211,14 @@ impl<'a> Parser<'a> {
                 .collect::<Result<HashSet<Tag>>>()?,
             body: String::default(),
         };
-        let mut options = Options::empty();
-        options.insert(Options::ENABLE_FOOTNOTES);
-        options.insert(Options::ENABLE_SMART_PUNCTUATION);
-        options.insert(Options::ENABLE_STRIKETHROUGH);
-        options.insert(Options::ENABLE_TABLES);
-        options.insert(Options::ENABLE_TASKLISTS);
-        let parser =
-            pulldown_cmark::Parser::new_ext(&input[body_start..], options);
 
-        // The headings in the post itself need to be deprecated twice to be
-        // subordinate to both the site title (h1) and the post title (h2). So
-        // `#` becomes h3 instead of h1. We do this by intercepting heading
-        // tags and returning the tag size + 2.
-        let fixed_subheading_sizes = parser.map(|ev| match ev {
-            Event::Start(tag) => Event::Start(match tag {
-                pulldown_cmark::Tag::Heading(s) => {
-                    pulldown_cmark::Tag::Heading(s + 2)
-                }
-                _ => tag,
-            }),
-            _ => ev,
-        });
-
-        push_html(&mut post.body, fixed_subheading_sizes, post.url.as_str())?;
+        markdown::to_html(
+            &mut post.body,
+            self.posts_url,
+            id,
+            &input[body_start..],
+            post.url.as_str(),
+        )?;
         Ok(post)
     }
 
@@ -340,6 +323,15 @@ impl std::error::Error for Error {
             Error::UrlParse(err) => Some(err),
             Error::Io(err) => Some(err),
             Error::Annotated(_, err) => Some(err),
+        }
+    }
+}
+
+impl From<markdown::Error> for Error {
+    fn from(err: markdown::Error) -> Error {
+        match err {
+            markdown::Error::Io(e) => Error::Io(e),
+            markdown::Error::UrlParse(e) => Error::UrlParse(e),
         }
     }
 }
