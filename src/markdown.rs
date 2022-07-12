@@ -5,7 +5,6 @@ use std::fmt;
 use std::io;
 use url::{ParseError as UrlParseError, Url};
 
-
 /// Converts markdown to HTML, writing the result into [`w`].
 ///
 /// * [`posts_url`] is the prefix for post URLs (e.g.,
