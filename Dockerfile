@@ -1,4 +1,4 @@
-FROM rustlang/rust:stable
+FROM rust:1.62.0
 
 WORKDIR /workspace
 
