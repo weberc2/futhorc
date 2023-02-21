@@ -25,7 +25,8 @@ pub fn build_site(config: Config) -> Result<()> {
     );
 
     // collect all posts
-    let posts = post_parser.parse_posts(&config.posts_source_directory)?;
+    let (posts, static_files) =
+        post_parser.parse_posts(&config.posts_source_directory)?;
 
     // Parse the template files.
     let index_template = parse_template(config.index_template.iter())?;
@@ -55,6 +56,9 @@ pub fn build_site(config: Config) -> Result<()> {
         atom_url: &config.atom_url,
     };
     writer.write_posts(&posts)?;
+
+    // write the static files
+    writer.write_static_files(&static_files)?;
 
     // copy static directory
     copy_dir(

@@ -56,6 +56,29 @@ impl<'a> EventConverter<'a> {
             // intercepting heading tags and returning the tag size + 2.
             Tag::Heading(s) => Tag::Heading(s + 2),
 
+            // Internal image links (links from blog posts, pages, and assets
+            // *to* posts, pages, and assets) need to be converted from their
+            // input formats to their output formats (e.g., a post linking to
+            // another post as `foo.md` will need to be converted to an
+            // equivalent link ending in `foo.html`).
+            Tag::Image(
+                link @ (LinkType::Inline
+                | LinkType::Reference
+                | LinkType::ReferenceUnknown
+                | LinkType::Shortcut
+                | LinkType::Autolink
+                | LinkType::Collapsed
+                | LinkType::CollapsedUnknown),
+                url,
+                title,
+            ) => Tag::Image(
+                link,
+                CowStr::Boxed(
+                    self.link_converter.convert(&url)?.into_boxed_str(),
+                ),
+                title,
+            ),
+
             // Internal links (links from blog posts, pages, and assets *to*
             // posts, pages, and assets) need to be converted from their input
             // formats to their output formats (e.g., a post linking to another
