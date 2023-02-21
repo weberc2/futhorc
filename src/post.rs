@@ -3,14 +3,10 @@
 //! [`Post::to_value`] and [`Post::summarize`] for details on how posts are
 //! converted into template values.
 
-use crate::markdown;
 use crate::tag::Tag;
 use gtmpl::Value;
-use serde::Deserialize;
 use std::collections::HashSet;
-use std::fmt;
-use std::fs::{read_dir, File};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use url::Url;
 
 /// Represents a blog post.
