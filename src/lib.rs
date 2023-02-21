@@ -28,6 +28,7 @@ pub mod config;
 pub mod feed;
 pub mod htmlrenderer;
 pub mod markdown;
+pub mod parser;
 pub mod post;
 pub mod tag;
 pub mod url;
