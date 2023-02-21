@@ -6,7 +6,7 @@
 
 use crate::config::Config;
 use crate::feed::{Error as FeedError, *};
-use crate::post::{Error as ParseError, Parser as PostParser};
+use crate::parser::{Error as ParseError, Parser as PostParser};
 use crate::write::{Error as WriteError, *};
 use gtmpl::Template;
 use std::fmt;
