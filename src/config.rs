@@ -189,8 +189,8 @@ impl Config {
                     root_output_directory: output_directory.to_owned(),
                     home_page: profile.site_root.join(&profile.home_page)?,
                     posts_source_directory: project_root.join("posts"),
-                    index_url: (&profile.site_root).join("pages/").unwrap(),
-                    posts_url: (&profile.site_root).join("posts/").unwrap(),
+                    index_url: (profile.site_root).join("pages/").unwrap(),
+                    posts_url: (profile.site_root).join("posts/").unwrap(),
                     index_template: theme
                         .index_template
                         .iter()
@@ -203,7 +203,7 @@ impl Config {
                         .collect(),
                     index_output_directory: output_directory.join("pages"),
                     posts_output_directory: output_directory.join("posts"),
-                    static_url: (&profile.site_root).join("static/").unwrap(),
+                    static_url: profile.site_root.join("static/").unwrap(),
                     static_source_directory: theme_dir.join("static"),
                     static_output_directory: output_directory.join("static"),
                     index_page_size: profile.index_page_size.0,

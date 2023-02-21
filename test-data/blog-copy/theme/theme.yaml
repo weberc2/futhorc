@@ -1,3 +1,0 @@
----
-index_template: [base-template.html, index-template.html]
-posts_template: [base-template.html, posts-template.html]
