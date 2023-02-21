@@ -64,8 +64,8 @@ pub fn build_site(config: Config) -> Result<()> {
 
     // copy /pages/index.html to /index.html
     let _ = std::fs::copy(
-        &config.index_output_directory.join("index.html"),
-        &config.root_output_directory.join("index.html"),
+        config.index_output_directory.join("index.html"),
+        config.root_output_directory.join("index.html"),
     )?;
 
     // create the atom feed
@@ -109,7 +109,7 @@ fn parse_template<P: AsRef<Path>>(
     for template_file in template_files {
         use std::io::Read;
         let template_file = template_file.as_ref();
-        File::open(&template_file)
+        File::open(template_file)
             .map_err(|e| Error::OpenTemplateFile {
                 path: template_file.to_owned(),
                 err: e,

@@ -201,7 +201,7 @@ dependencies = [
 
 [[package]]
 name = "futhorc"
-version = "0.1.10"
+version = "0.1.11"
 dependencies = [
  "atom_syndication",
  "chrono",
