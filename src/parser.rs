@@ -419,7 +419,10 @@ mod test {
             tags: HashSet::new(),
         }];
 
-        // assert_eq!(wanted_posts, posts);
+        let wanted_static_files: Vec<StaticFile> = Vec::new();
+
+        assert_eq!(wanted_posts, posts);
+        assert_eq!(wanted_static_files, static_files);
         Ok(())
     }
 }
