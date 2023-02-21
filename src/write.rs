@@ -1,8 +1,10 @@
 //! Takes [`Post`] objects created by the [`crate::post`] module and turns them
 //! into index and post HTML files on the file system.
 
+use crate::parser::StaticFile;
 use crate::post::*;
 use gtmpl::{Template, Value};
+use std::collections::HashSet;
 use std::fmt;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -78,7 +80,6 @@ impl Writer<'_> {
     /// Takes a slice of [`Post`], indexes it by tag, and writes post and index
     /// pages to disk.
     pub fn write_posts(&self, posts: &[Post]) -> Result<()> {
-        use std::collections::HashSet;
         let mut seen_dirs: HashSet<PathBuf> = HashSet::new();
         pages(
             posts,
@@ -89,12 +90,32 @@ impl Writer<'_> {
             self.index_template,
         )
         .try_for_each(|page| {
-            let dir = page.file_path.parent().unwrap(); // there should always be a dir
-            if seen_dirs.insert(dir.to_owned()) {
-                std::fs::create_dir_all(dir)?;
-            }
+            Self::make_parent_dir(&mut seen_dirs, &page.file_path)?;
             self.write_page(&page)
         })
+    }
+
+    pub fn write_static_files(
+        &self,
+        static_files: &[StaticFile],
+    ) -> Result<()> {
+        let mut seen_dirs: HashSet<PathBuf> = HashSet::new();
+        for (src, dst) in static_files {
+            Self::make_parent_dir(&mut seen_dirs, dst)?;
+            std::fs::hard_link(src, dst)?;
+        }
+        Ok(())
+    }
+
+    fn make_parent_dir<'a>(
+        seen_dirs: &mut HashSet<PathBuf>,
+        path: &Path,
+    ) -> Result<()> {
+        let parent = path.parent().unwrap();
+        if seen_dirs.insert(parent.to_owned()) {
+            std::fs::create_dir_all(&parent)?;
+        }
+        Ok(())
     }
 }
 

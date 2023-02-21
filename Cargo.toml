@@ -22,6 +22,7 @@ clap = "2.33.3"
 atom_syndication = "0.11.0"
 chrono = "0.4.19"
 url = { version = "2.2.2", features = ["serde"] }
+walkdir = "2.3.2"
 
 [features]
 fail-on-warnings = []

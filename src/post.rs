@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use url::Url;
 
 /// Represents a blog post.
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Post {
     /// The output path where the final post file will be rendered.
     pub file_path: PathBuf,
