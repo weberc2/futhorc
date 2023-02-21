@@ -235,7 +235,7 @@ impl<'a, 't> Index<'a> {
                     item: Value::Array(
                         chunk.iter().map(|p| p.summarize()).collect(),
                     ),
-                    file_path: self.output_directory.join(&file_name),
+                    file_path: self.output_directory.join(file_name),
                     prev: match i {
                         0 => None,
                         // unwrap: `"index.html"` and `"<int>.html"` should
