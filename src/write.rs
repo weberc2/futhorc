@@ -1,6 +1,7 @@
 //! Takes [`Post`] objects created by the [`crate::post`] module and turns them
 //! into index and post HTML files on the file system.
 
+use crate::parser::StaticFile;
 use crate::post::*;
 use gtmpl::{Template, Value};
 use std::collections::HashSet;
