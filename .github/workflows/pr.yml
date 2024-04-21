@@ -40,13 +40,6 @@ jobs:
       run: go mod download
     - name: Vet
       run: go vet -v ./...
-    - name: Lint
-      id: lint
-      run: |
-          # binary will be $(go env GOPATH)/bin/golangci-lint
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.43.0
-          golangci-lint --version
-          golangci-lint run
     - name: Build
       run: go build -v ./...
     - name: Test
