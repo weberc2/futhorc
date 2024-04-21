@@ -4,34 +4,58 @@ on:
   pull_request:
     branches: [ master ]
 
-env:
-  CARGO_TERM_COLOR: always
-
 jobs:
+  golangci:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: false
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          # Require: The version of golangci-lint to use.
+          # When `install-mode` is `binary` (default) the value can be v1.2 or
+          #  v1.2.3 or `latest` to use the latest version.
+          # When `install-mode` is `goinstall` the value can be v1.2.3,
+          #  `latest`, or the hash of a commit.
+          version: v1.54
+
   build:
 
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Install latest stable
-      uses: actions-rs/toolchain@v1
+    - uses: actions/checkout@v4
+    - name: Setup Go 1.22
+      uses: actions/setup-go@v4
       with:
-        toolchain: stable
-        override: true
-        components: rustfmt, clippy
-    - uses: Swatinem/rust-cache@v1 # must follow toolchain installation
-    - name: Run cargo check
-      uses: actions-rs/cargo@v1
-      with:
-        command: check
-    - name: Format
-      run: cargo fmt --all -- --check
+        go-version: 1.22.x
+        cache-dependency-path: go.sum
+    - name: Install dependencies
+      run: go get .
+    - name: Vet
+      run: go vet -v ./...
     - name: Lint
-      run: cargo clippy -- --deny "warnings"
+      id: lint
+      run: |
+          # binary will be $(go env GOPATH)/bin/golangci-lint
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.43.0
+          golangci-lint --version
+          golangci-lint run
     - name: Build
-      run: cargo build --verbose --features fail-on-warnings
-    - name: Run tests
-      run: cargo test --verbose --features fail-on-warnings
-    - name: Build docs
-      run: cargo doc --verbose --features fail-on-warnings
+      run: go build -v ./...
+    - name: Test
+      run: go test -v ./...
+    - name: Format
+      id: fmt
+      run: |
+          go install github.com/segmentio/golines@v0.10.0
+          output="$(golines -m 79 --shorten-comments --dry-run .)"
+          if [ -n "$output" ]; then
+              echo "$output"
+              exit 1
+          fi
