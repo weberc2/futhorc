@@ -34,7 +34,8 @@ func Convert(c *Config, url *url.URL, doc template.HTML) template.HTML {
 			// still l to the correct page.
 			if l, ok := node.(*ast.Link); ok && entering {
 				if l.NoteID > 0 {
-					w.Write(fmt.Appendf(
+					// ignoring error because we're writing to memory
+					_, _ = w.Write(fmt.Appendf(
 						nil,
 						`<sup class="footnote-ref" id="fnref:%[2]d">`+
 							`<a href="%[1]s#fn:%[2]d">%[2]d</a>`+

@@ -121,7 +121,7 @@ func randInt(min, max int) int {
 
 func randData(min, max int) []byte {
 	buf := make([]byte, randInt(min, max))
-	crand.Read(buf)
+	_, _ = crand.Read(buf)
 	out := make([]byte, base64.RawURLEncoding.EncodedLen(len(buf)))
 	base64.RawURLEncoding.Encode(out, buf)
 	return out
