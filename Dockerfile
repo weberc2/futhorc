@@ -1,7 +1,7 @@
-FROM rust:1.62.0
+FROM golang:1.22
 
 WORKDIR /workspace
 
 COPY . .
 
-RUN cargo build --release && cp ./target/release/futhorc /bin/futhorc
+RUN go build -o /bin/futhorc ./cmd/futhorc
