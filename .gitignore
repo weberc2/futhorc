@@ -1,1 +1,4 @@
-/target
+**/run.trace
+**/run.pprof
+example/
+example2/
