@@ -48,7 +48,7 @@ jobs:
       id: fmt
       run: |
           go install github.com/segmentio/golines@v0.10.0
-          output="$(golines -m 79 --shorten-comments --dry-run .)"
+          output="$(golines -m 80 --shorten-comments --dry-run .)"
           if [ -n "$output" ]; then
               echo "$output"
               exit 1
