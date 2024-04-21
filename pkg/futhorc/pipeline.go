@@ -2,29 +2,87 @@ package futhorc
 
 import (
 	"context"
+	"fmt"
 	"futhorc/pkg/actor"
 	"futhorc/pkg/markdown"
 	"html/template"
 	"io/fs"
 	"net/url"
+	"os"
+	"path/filepath"
 	"runtime/trace"
 	"time"
 
 	"github.com/go-git/go-billy/v5"
+	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/gorilla/feeds"
 )
 
 type Pipeline struct {
 	PostSources                fs.FS
-	PostAssets                 fs.FS
 	ThemeAssets                fs.FS
 	BaseURL                    *url.URL
 	SiteData                   SiteData
 	PostTemplate               *template.Template
 	IndexTemplate              *template.Template
 	OutputDirectory            billy.Filesystem
-	OutputDirectoryPostAssets  billy.Filesystem
 	OutputDirectoryThemeAssets billy.Filesystem
+}
+
+func LoadPipeline(dir, siteRoot string) (pipeline Pipeline, err error) {
+	if dir, err = filepath.Abs(dir); err != nil {
+		err = fmt.Errorf("loading pipeline: %w", err)
+		return
+	}
+
+	// trailing slash is critical or else url.URL.ResolveReference() will
+	// silently trim the `_output` part.
+	outputDirectory := filepath.Join(dir, "_output") + "/"
+	if siteRoot == "" {
+		siteRoot = "file://" + outputDirectory
+	}
+
+	if pipeline.BaseURL, err = url.Parse(siteRoot); err != nil {
+		err = fmt.Errorf("loading pipeline: %w", err)
+		return
+	}
+
+	pipeline.PostSources = os.DirFS(filepath.Join(dir, "posts"))
+	pipeline.ThemeAssets = os.DirFS(filepath.Join(dir, "theme/static"))
+	pipeline.OutputDirectory = osfs.New(outputDirectory)
+	pipeline.OutputDirectoryThemeAssets = osfs.New(filepath.Join(
+		outputDirectory,
+		"static",
+		"theme",
+	))
+
+	var theme Theme
+	if theme, err = LoadTheme(os.DirFS(filepath.Join(
+		dir,
+		"theme",
+	))); err != nil {
+		err = fmt.Errorf("loading pipeline: %w", err)
+		return
+	}
+
+	pipeline.PostTemplate = theme.PostTemplate
+	pipeline.IndexTemplate = theme.IndexTemplate
+
+	pipeline.SiteData = SiteData{
+		BaseURL: template.URL(pipeline.BaseURL.String()),
+		HomePage: template.URL(
+			pipeline.BaseURL.JoinPath("index.html").String(),
+		),
+		ThemeAssets: template.URL(
+			pipeline.BaseURL.JoinPath("static/theme/").String(),
+		),
+		FeedURL: template.URL(
+			pipeline.BaseURL.JoinPath("index.json").String(),
+		),
+		FeedType: "application/json",
+	}
+
+	return
 }
 
 func (pipeline *Pipeline) Run(ctx context.Context) error {

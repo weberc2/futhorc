@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"flag"
 	"futhorc/pkg/futhorc"
 	"log"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"runtime/pprof"
 	"runtime/trace"
 	"time"
@@ -24,9 +26,24 @@ func main() {
 	defer func() { slog.Debug("completed", "elapsed", time.Since(start)) }()
 	slog.Debug("started", "time", start)
 
+	var siteRoot string
+	flag.StringVar(
+		&siteRoot,
+		"site-root",
+		"",
+		"the URL to the root of the site",
+	)
+
+	flag.Parse()
+
 	dir := "."
-	if len(os.Args) > 1 {
-		dir = os.Args[1]
+	if args := flag.Args(); len(args) > 0 {
+		dir = args[0]
+	}
+
+	var err error
+	if dir, err = filepath.Abs(dir); err != nil {
+		log.Fatal(err)
 	}
 
 	pproff, err := os.Create("./run.pprof")
@@ -50,7 +67,7 @@ func main() {
 	}
 	defer trace.Stop()
 
-	pipeline, err := futhorc.LoadPipeline(dir)
+	pipeline, err := futhorc.LoadPipeline(dir, siteRoot)
 	if err != nil {
 		log.Fatal(err)
 	}
