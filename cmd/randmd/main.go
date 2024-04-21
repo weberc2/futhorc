@@ -1,6 +1,7 @@
 package main
 
 import (
+	crand "crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"futhorc/pkg/futhorc"
@@ -16,7 +17,6 @@ import (
 )
 
 func main() {
-	rand.Seed(time.Now().Unix())
 	if err := os.RemoveAll("./example2"); err != nil {
 		if !os.IsNotExist(err) {
 			log.Fatal(err)
@@ -121,7 +121,7 @@ func randInt(min, max int) int {
 
 func randData(min, max int) []byte {
 	buf := make([]byte, randInt(min, max))
-	rand.Read(buf)
+	crand.Read(buf)
 	out := make([]byte, base64.RawURLEncoding.EncodedLen(len(buf)))
 	base64.RawURLEncoding.Encode(out, buf)
 	return out

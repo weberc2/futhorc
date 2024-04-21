@@ -114,7 +114,6 @@ var (
 		"scanning frontmatter: missing end fence",
 	)
 
-	blockSize  = 1024
 	startFence = []byte(startFenceString)
 	endFence   = []byte(endFenceString)
 )
