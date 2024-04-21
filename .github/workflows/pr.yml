@@ -22,7 +22,7 @@ jobs:
           #  v1.2.3 or `latest` to use the latest version.
           # When `install-mode` is `goinstall` the value can be v1.2.3,
           #  `latest`, or the hash of a commit.
-          version: v1.54
+          version: v1.57
 
   build:
 
