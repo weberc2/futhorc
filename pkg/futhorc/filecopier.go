@@ -6,17 +6,18 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"path/filepath"
 
 	"futhorc/pkg/actor"
 
 	"github.com/go-git/go-billy/v5"
 )
 
-func FileCopier(dst billy.Filesystem, src fs.FS) actor.InputCallback[string] {
+func FileCopier(dst billy.Filesystem, src fs.FS, prefix string) actor.InputCallback[string] {
 	return func(ctx context.Context, path string) (err error) {
 		var df billy.File
 		var sf fs.File
-		if df, err = dst.Create(path); err != nil {
+		if df, err = dst.Create(filepath.Join(prefix, path)); err != nil {
 			err = fmt.Errorf(
 				"copying file `%s`; creating destination file: %w",
 				path,

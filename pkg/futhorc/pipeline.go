@@ -19,14 +19,13 @@ import (
 )
 
 type Pipeline struct {
-	PostSources                fs.FS
-	ThemeAssets                fs.FS
-	BaseURL                    *url.URL
-	SiteData                   SiteData
-	PostTemplate               *template.Template
-	IndexTemplate              *template.Template
-	OutputDirectory            billy.Filesystem
-	OutputDirectoryThemeAssets billy.Filesystem
+	PostSources     fs.FS
+	ThemeAssets     fs.FS
+	BaseURL         *url.URL
+	SiteData        SiteData
+	PostTemplate    *template.Template
+	IndexTemplate   *template.Template
+	OutputDirectory billy.Filesystem
 }
 
 func LoadPipeline(dir, siteRoot string) (pipeline Pipeline, err error) {
@@ -48,13 +47,8 @@ func LoadPipeline(dir, siteRoot string) (pipeline Pipeline, err error) {
 	}
 
 	pipeline.PostSources = os.DirFS(filepath.Join(dir, "posts"))
-	pipeline.ThemeAssets = os.DirFS(filepath.Join(dir, "theme/static"))
+	pipeline.ThemeAssets = os.DirFS(filepath.Join(dir, "theme/assets"))
 	pipeline.OutputDirectory = osfs.New(outputDirectory)
-	pipeline.OutputDirectoryThemeAssets = osfs.New(filepath.Join(
-		outputDirectory,
-		"static",
-		"theme",
-	))
 
 	var theme Theme
 	if theme, err = LoadTheme(os.DirFS(filepath.Join(
@@ -74,7 +68,7 @@ func LoadPipeline(dir, siteRoot string) (pipeline Pipeline, err error) {
 			pipeline.BaseURL.JoinPath("index.html").String(),
 		),
 		ThemeAssets: template.URL(
-			pipeline.BaseURL.JoinPath("static/theme/").String(),
+			pipeline.BaseURL.JoinPath("assets/theme/").String(),
 		),
 		FeedURL: template.URL(
 			pipeline.BaseURL.JoinPath("index.json").String(),
@@ -91,6 +85,32 @@ func (pipeline *Pipeline) Run(ctx context.Context) error {
 	ctx, task := trace.NewTask(ctx, "pipeline")
 	defer task.End()
 
+	postAssets, err := fs.Sub(pipeline.PostSources, "assets")
+	if err != nil {
+		return fmt.Errorf(
+			"creating post assets subdirectory filesystem: %w",
+			err,
+		)
+	}
+
+	postAssetsFinder := actor.NewOutput(
+		"FileFinder::PostAssets",
+		1,
+		FileFinder(postAssets, ""),
+	)
+
+	postAssetsCopier := actor.NewInput(
+		"FileCopier::PostAssets",
+		4,
+		postAssetsFinder.OutputChan(),
+		FileCopier(
+			pipeline.OutputDirectory,
+			postAssets,
+			"/assets/posts/",
+		),
+		nil,
+	)
+
 	themeAssetsFinder := actor.NewOutput(
 		"FileFinder::ThemeAssets",
 		1,
@@ -101,7 +121,11 @@ func (pipeline *Pipeline) Run(ctx context.Context) error {
 		"FileCopier::ThemeAssets",
 		4,
 		themeAssetsFinder.OutputChan(),
-		FileCopier(pipeline.OutputDirectoryThemeAssets, pipeline.ThemeAssets),
+		FileCopier(
+			pipeline.OutputDirectory,
+			pipeline.ThemeAssets,
+			"/assets/theme/",
+		),
 		nil,
 	)
 
@@ -192,6 +216,8 @@ func (pipeline *Pipeline) Run(ctx context.Context) error {
 	)
 
 	return actor.Multi{
+		&postAssetsFinder,
+		&postAssetsCopier,
 		&themeAssetsFinder,
 		&themeAssetsCopier,
 		&sourceFinder,

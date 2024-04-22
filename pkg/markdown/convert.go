@@ -93,22 +93,28 @@ func (visitor *visitor) Visit(node ast.Node, entering bool) ast.WalkStatus {
 		heading.Level += int(visitor.DeprecateHeadings)
 		return ast.SkipChildren
 	} else if link, ok := node.(*ast.Link); ok && entering {
-		if len(link.Destination) > 0 {
-			dst, err := url.Parse(*(*string)(unsafe.Pointer(&link.Destination)))
-			if err != nil {
-				slog.Warn(
-					"DocumentVisitor: invalid link url",
-					"err", err.Error(),
-					"url", string(link.Destination),
-				)
-				return ast.SkipChildren
-			}
-			resolved := patchURL(visitor.BaseURL, visitor.url, dst).String()
-			link.Destination = *(*[]byte)(unsafe.Pointer(&resolved))
-			return ast.SkipChildren
-		}
+		link.Destination = visitor.patchURL(link.Destination)
+	} else if img, ok := node.(*ast.Image); ok && entering {
+		img.Destination = visitor.patchURL(img.Destination)
 	}
 	return ast.GoToNext
+}
+
+func (visitor *visitor) patchURL(dst []byte) []byte {
+	if len(dst) > 0 {
+		d, err := url.Parse(*(*string)(unsafe.Pointer(&dst)))
+		if err != nil {
+			slog.Warn(
+				"DocumentVisitor: invalid link url",
+				"err", err.Error(),
+				"url", string(dst),
+			)
+			return dst
+		}
+		resolved := patchURL(visitor.BaseURL, visitor.url, d).String()
+		return *(*[]byte)(unsafe.Pointer(&resolved))
+	}
+	return dst
 }
 
 func patchURL(base, current, u *url.URL) *url.URL {
