@@ -67,7 +67,7 @@ type Link struct {
 	URL  template.URL
 }
 
-func (l *Link) MarshalYAML() (interface{}, error) {
+func (l Link) MarshalYAML() (interface{}, error) {
 	return l.Text, nil
 }
 

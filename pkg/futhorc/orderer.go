@@ -52,6 +52,10 @@ func (orderer *Orderer[T]) Run(ctx context.Context) error {
 }
 
 func OrderPages[T any](orderedPages []OrderedPage[T]) {
+	if len(orderedPages) < 1 {
+		return
+	}
+
 	slices.SortFunc(orderedPages, func(a, b OrderedPage[T]) int {
 		return b.Compare(&a.Page)
 	})
