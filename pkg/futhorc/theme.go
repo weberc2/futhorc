@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"io/fs"
 	"net/url"
+	"strings"
 
 	"github.com/tailscale/hujson"
 )
@@ -64,6 +65,7 @@ func parse(fs fs.FS, templates ...string) (*template.Template, error) {
 			"html": func(input string) template.HTML {
 				return template.HTML(input)
 			},
+			"startswith": strings.HasPrefix,
 		}).
 		ParseFS(fs, templates...)
 }
