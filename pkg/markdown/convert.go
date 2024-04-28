@@ -81,7 +81,7 @@ type Config struct {
 	DeprecateHeadings uint8
 }
 
-const CommonExtensions = parser.CommonExtensions
+const CommonExtensions = parser.CommonExtensions &^ parser.MathJax
 
 type visitor struct {
 	*Config
