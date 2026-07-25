@@ -1,0 +1,5 @@
+**/run.trace
+**/run.pprof
+example/
+example2/
+bin/

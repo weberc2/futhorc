@@ -1,0 +1,5 @@
+// Minimal test theme: just enough to exercise the pipeline end to end.
+{
+    "indexTemplate": ["index.html"],
+    "postTemplate": ["post.html"]
+}

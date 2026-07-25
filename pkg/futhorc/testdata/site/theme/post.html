@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{.Content.Title}}</title>
+    <link rel="stylesheet" href="{{.ThemeAssets}}theme.css">
+    <link rel="alternate" type="{{.FeedType}}" href="{{.FeedURL}}">
+</head>
+<body>
+<article>
+    <h1><a href="{{url .URL}}">{{.Content.Title}}</a></h1>
+    <p class="meta">
+        {{.Content.Author}} — {{.Content.Date}}
+        {{- range .Content.Tags}}
+        <a class="tag" href="{{.URL}}">{{.Text}}</a>
+        {{- end}}
+    </p>
+    {{.Content.Body}}
+</article>
+<nav>
+    {{if .Prev}}<a rel="prev" href="{{url .Prev}}">older</a>{{end}}
+    {{if .Next}}<a rel="next" href="{{url .Next}}">newer</a>{{end}}
+</nav>
+</body>
+</html>

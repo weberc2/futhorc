@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Site</title>
+    <link rel="stylesheet" href="{{.ThemeAssets}}theme.css">
+    <link rel="alternate" type="{{.FeedType}}" href="{{.FeedURL}}">
+</head>
+<body>
+<main>
+    {{- range .Content.Posts}}
+    <section>
+        <h2><a href="{{url .URL}}">{{.Content.Title}}</a></h2>
+        {{.Content.Snippet}}
+    </section>
+    {{- end}}
+</main>
+<nav>
+    {{if .Prev}}<a rel="prev" href="{{url .Prev}}">older</a>{{end}}
+    {{if .Next}}<a rel="next" href="{{url .Next}}">newer</a>{{end}}
+</nav>
+</body>
+</html>
